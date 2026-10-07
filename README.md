@@ -71,9 +71,18 @@ scripts/finetune.sh ubuntu pu         exact     0 0.8   # PU_PT+FT, alpha = alph
 scripts/finetune.sh ubuntu pu         estimated 0 0.8   # PU_PT+FT, alpha = alpha-hat
 ```
 
-The fully supervised baseline of Han et al. is not a `finetune.sh` run. Call
-`FineTuning/Response_selection.py` directly with `--post-train original --objective supervised`; it
-loads the checkpoint from `FPT/PT_checkpoint/original/<task><n>/bert.pt`.
+The fully supervised baseline of Han et al. is not a `finetune.sh` run, because that script always
+loads our checkpoint. Call the entrypoint directly; `--rPU` is optional for this combination since
+neither the checkpoint nor the loss needs it:
+
+```bash
+python FineTuning/Response_selection.py --task ubuntu --post-train original --objective supervised --seed 0 --is_training
+```
+
+It loads the checkpoint from `FPT/PT_checkpoint/original/<task><n>/bert.pt`, and its metrics are
+recorded under the `fs_pt_ft` row, so it populates the fully supervised row of the table. A
+`--post-train zero_shot` run is tagged `zero_shot_ft`, which is not a paper row, and
+`tools/aggregate_table.py` rejects it as unknown.
 
 ### 3. Our class prior estimator
 
@@ -123,7 +132,7 @@ That separation is what makes the tail-ratio estimator work. Output goes to
 
 ## Three-seed protocol
 
-The table row `α = α̂` and the seed statistics need three fine-tuning seeds per cell, 18 runs in
+The table row `α = α̂` (not yet in the Reported results table below) and the seed statistics need three fine-tuning seeds per cell, 18 runs in
 total (seed 0 of the three pre-existing rows is reused, see below). Order matters in one place:
 
 1. Run `scripts/estimate_prior.sh ubuntu 0.8` and `scripts/estimate_prior.sh e_commerce 0.8` first.
@@ -132,7 +141,8 @@ total (seed 0 of the three pre-existing rows is reused, see below). Order matter
    `jobs/submit_all.sh` skips the `estimated` jobs with a message if the file is missing, instead of
    letting them fail in the queue.
 2. Generate and submit the jobs. `python scripts/gen_jobs.py` writes 18 Slurm files under `jobs/` plus
-   `jobs/submit_all.sh`. The job files assume a Slurm cluster with A100 partitions and a hard-coded
+   `jobs/submit_all.sh`. Rerunning regenerates and overwrites every file under `jobs/`, so edit the constants in
+   the generator rather than the generated files. The job files assume a Slurm cluster with A100 partitions and a hard-coded
    virtualenv path, so edit the `#SBATCH` header and `VENV_PATH` at the top of `scripts/gen_jobs.py`
    for your setup, or just run the `scripts/finetune.sh` line each job contains.
 3. Run `python tools/aggregate_table.py`. It reads the per-run metrics and writes `results/table1.md`

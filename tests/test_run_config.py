@@ -7,10 +7,18 @@ from FineTuning.run_config import row_tag, run_paths, validate_args, write_metri
 
 
 def test_row_tag_for_each_table_row():
-    assert row_tag("supervised", "exact") == "supervised_ft"
-    assert row_tag("pu", "zero") == "pu_zero"
-    assert row_tag("pu", "exact") == "pu_exact"
-    assert row_tag("pu", "estimated") == "pu_estimated"
+    assert row_tag("supervised", "exact", "positive_only") == "supervised_ft"
+    assert row_tag("pu", "zero", "positive_only") == "pu_zero"
+    assert row_tag("pu", "exact", "positive_only") == "pu_exact"
+    assert row_tag("pu", "estimated", "positive_only") == "pu_estimated"
+
+
+def test_row_tag_original_checkpoint_is_the_han_row():
+    assert row_tag("supervised", "exact", "original") == "fs_pt_ft"
+
+
+def test_row_tag_zero_shot_is_not_a_table_row():
+    assert row_tag("supervised", "exact", "zero_shot") == "zero_shot_ft"
 
 
 def test_run_paths_carry_the_seed():

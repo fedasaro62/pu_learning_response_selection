@@ -6,7 +6,13 @@ import sys
 ROW_TAGS = {"zero": "pu_zero", "exact": "pu_exact", "estimated": "pu_estimated"}
 
 
-def row_tag(objective: str, prior: str) -> str:
+POST_TRAIN_TAGS = {"original": "fs_pt_ft", "zero_shot": "zero_shot_ft"}
+
+
+def row_tag(objective: str, prior: str, post_train: str) -> str:
+    """Table row a run belongs to; the checkpoint overrides the objective for non-ours post-training."""
+    if post_train in POST_TRAIN_TAGS:
+        return POST_TRAIN_TAGS[post_train]
     return "supervised_ft" if objective == "supervised" else ROW_TAGS[prior]
 
 

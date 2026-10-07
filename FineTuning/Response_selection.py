@@ -79,7 +79,7 @@ from run_config import row_tag, run_paths, validate_args, write_metrics
 
 validate_args(args.objective, args.post_train, args.rPU)
 args.post_train_ckpt = args.post_train_ckpt or CHECKPOINTS[args.task]
-row = row_tag(args.objective, args.prior)
+row = row_tag(args.objective, args.prior, args.post_train)
 args.save_path, args.score_file_path, args.metrics_path = run_paths(args.task, row, args.seed, args.rPU)
 os.makedirs(os.path.dirname(args.save_path), exist_ok=True)
 os.makedirs(os.path.dirname(args.metrics_path), exist_ok=True)
