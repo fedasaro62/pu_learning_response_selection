@@ -7,7 +7,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from torch.utils.data import Subset, RandomSampler, DataLoader
-from BERT_finetuning.fixed_prior import NeuralNetwork, BERTDataset
+from BERT_finetuning.data import BERTDataset
+from BERT_finetuning.model import NeuralNetwork
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -48,6 +49,8 @@ def main():
         args.post_train_ckpt = CHECKPOINTS[args.task]
 
     args.score_file_path = ""
+    args.objective = "pu"
+    args.prior_value = None
     args.save_path = os.path.join(args.save_path, args.post_train, args.task, 'fixed_prior', f'bert_rPU{args.rPU}.pt')
     os.makedirs(os.path.dirname(args.save_path), exist_ok=True)
 
@@ -66,7 +69,7 @@ def main():
     sampler = RandomSampler(dataset)
     dataloader = DataLoader(dataset, batch_size=args.batch_size, sampler=sampler, num_workers=args.num_workers)
     
-    model.estimate_prior(dataloader, split=args.split)
+    model.extract_similarities(dataloader, split=args.split)
 
 if __name__ == "__main__":
     main()
