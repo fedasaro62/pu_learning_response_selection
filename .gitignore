@@ -17,8 +17,8 @@ data/*/*.zip
 data/*/*.tar.gz
 
 # model checkpoints and scores
-FPT/PT_checkpoint/
-FineTuning/FT_checkpoint/
+FPT/PT_checkpoint
+FineTuning/FT_checkpoint
 PvU/pvu_checkpoint/
 *.pt
 
