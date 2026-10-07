@@ -8,6 +8,11 @@ The repository covers the full PU pipeline on top of BERT-FP, plus a lightweight
 estimator that reads the cosine similarities of the post-trained encoder and needs no labeled
 negatives and no second model.
 
+![BERT-FP architecture](docs/architecture.png)
+
+The context and response are encoded as one sequence; the final `[CLS]` state is scored by a linear
+layer. Post-training and fine-tuning both run on this backbone.
+
 ## What is here
 
 | Component | Path | Role in the paper |
@@ -82,6 +87,13 @@ and writes `results/pi_hat_vs_tau_<split>_<task>_rPU0.8.png`.
 
 The estimate printed for the train split is the number reported as *Ours* in Table 2.
 
+| Ubuntu (dev) | E-Commerce (dev) |
+| --- | --- |
+| ![](docs/alpha_vs_tau_ubuntu_dev.png) | ![](docs/alpha_vs_tau_e_commerce_dev.png) |
+
+`α̂(τ)` falls from near 1, flattens onto a plateau around the true `α*` (red), then goes noisy once
+the tail empties. The selected `τ*` (black) lands inside that plateau on both corpora.
+
 ### 4. Baseline estimators (Table 2)
 
 ```bash
@@ -99,7 +111,13 @@ Scott, BBE and DedPU to its output scores. Estimates are appended to
 scripts/plot_similarities.sh ubuntu 0.8
 ```
 
-Produces the zero-shot and post-trained densities under `results/density/cosine_similarity/`.
+| Zero-shot | Post-trained |
+| --- | --- |
+| ![](docs/similarity_zero_shot.png) | ![](docs/similarity_post_trained.png) |
+
+Post-training pulls matched and unmatched pairs apart on Ubuntu, from `Δμ = 0.028` to `Δμ = 0.112`.
+That separation is what makes the tail-ratio estimator work. Output goes to
+`results/density/cosine_similarity/`.
 
 ## Reported results
 
