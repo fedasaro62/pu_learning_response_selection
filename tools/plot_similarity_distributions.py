@@ -16,7 +16,7 @@ from transformers import BertConfig, BertModel, BertTokenizer
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "FineTuning")))
 
-from BERT_finetuning.fixed_prior import BERTDataset  # noqa: E402
+from BERT_finetuning.data import BERTDataset  # noqa: E402
 
 FT_DATA = {
     "ubuntu": "data/ubuntu_data/dataset_1M.pkl",
