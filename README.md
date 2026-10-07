@@ -46,20 +46,34 @@ scripts/post_train.sh e_commerce 0.8
 Writes one checkpoint per epoch under `FPT/PT_checkpoint/positive_only/<task>/checkpoint<n>/`. The
 later stages read epoch 25 for Ubuntu and epoch 34 for E-Commerce, matching the BERT-FP schedule.
 
-### 2. PU fine-tuning
+### 2. Fine-tuning
+
+Two flags decide what a fine-tuning run is, and they are independent. `--post-train` picks which
+checkpoint is loaded (`positive_only` is ours from step 1, `original` is Han et al.'s released
+BERT-FP, `zero_shot` is the plain pretrained encoder). `--objective` picks the loss: `pu` is the PU
+loss over the partially labeled targets, `supervised` is plain cross-entropy over the full labels.
+The old `--strategy` flag is gone, and so is the old coupling where `--rPU` silently chose both the
+checkpoint and the loss. That coupling made PU post-training followed by supervised fine-tuning
+unreachable from the command line; it is now just `--post-train positive_only --objective supervised`.
+
+For the `pu` objective, `--prior` sets `α`: `zero` treats every unlabeled pair as a negative, `exact`
+uses `α*` computed from the label counts, and `estimated` uses our `α̂` from step 3. The prior is
+ignored under `supervised`.
+
+`scripts/finetune.sh` takes `task objective prior seed rPU`, always loads our post-trained
+checkpoint, and trains and then evaluates R@1, R@2 and R@5 on the test set. The four table rows that
+use it are:
 
 ```bash
-scripts/finetune.sh ubuntu pos_neg_finetune  0.8   # PU_PT+FT with alpha = 0
-scripts/finetune.sh ubuntu statistical_prior 0.8   # PU_PT+FT with alpha = alpha*
+scripts/finetune.sh ubuntu supervised exact     0 0.8   # PU_PT + FS_FT
+scripts/finetune.sh ubuntu pu         zero      0 0.8   # PU_PT+FT, alpha = 0
+scripts/finetune.sh ubuntu pu         exact     0 0.8   # PU_PT+FT, alpha = alpha*
+scripts/finetune.sh ubuntu pu         estimated 0 0.8   # PU_PT+FT, alpha = alpha-hat
 ```
 
-`pos_neg_finetune` treats every unlabeled pair as a negative, which is the PU loss with `α = 0`.
-`statistical_prior` computes the exact prior `α*` from the label counts and plugs it into the PU
-loss. Both scripts train, then evaluate R@1, R@2 and R@5 on the test set.
-
-Running `statistical_prior` with `--rPU` omitted gives the fully supervised cross-entropy baseline,
-but it then loads Han et al.'s released BERT-FP checkpoint from
-`FPT/PT_checkpoint/original/<task><n>/bert.pt` rather than a checkpoint produced here.
+The fully supervised baseline of Han et al. is not a `finetune.sh` run. Call
+`FineTuning/Response_selection.py` directly with `--post-train original --objective supervised`; it
+loads the checkpoint from `FPT/PT_checkpoint/original/<task><n>/bert.pt`.
 
 ### 3. Our class prior estimator
 
@@ -106,6 +120,41 @@ scripts/plot_similarities.sh ubuntu 0.8
 Post-training pulls matched and unmatched pairs apart on Ubuntu, from `Δμ = 0.028` to `Δμ = 0.112`.
 That separation is what makes the tail-ratio estimator work. Output goes to
 `results/density/cosine_similarity/`.
+
+## Three-seed protocol
+
+The table row `α = α̂` and the seed statistics need three fine-tuning seeds per cell, 18 runs in
+total (seed 0 of the three pre-existing rows is reused, see below). Order matters in one place:
+
+1. Run `scripts/estimate_prior.sh ubuntu 0.8` and `scripts/estimate_prior.sh e_commerce 0.8` first.
+   Besides printing the estimate, each call persists it to
+   `resources/prior/alpha_hat_<task>_rPU<r>_<split>.json`, and `--prior estimated` reads that file.
+   `jobs/submit_all.sh` skips the `estimated` jobs with a message if the file is missing, instead of
+   letting them fail in the queue.
+2. Generate and submit the jobs. `python scripts/gen_jobs.py` writes 18 Slurm files under `jobs/` plus
+   `jobs/submit_all.sh`. The job files assume a Slurm cluster with A100 partitions and a hard-coded
+   virtualenv path, so edit the `#SBATCH` header and `VENV_PATH` at the top of `scripts/gen_jobs.py`
+   for your setup, or just run the `scripts/finetune.sh` line each job contains.
+3. Run `python tools/aggregate_table.py`. It reads the per-run metrics and writes `results/table1.md`
+   and `results/table1.tex` with mean ± std over seeds. It rejects unknown rows and mixed `rPU`
+   groups rather than averaging them.
+
+Seed 0 of `supervised`, `pu zero` and `pu exact` comes from the campaign that produced the original
+table, so only seeds 1 and 2 are re-run for those rows, while `pu estimated` runs all three. Before
+trusting that reuse, `scripts/check_equivalence.sh` re-runs the first training batch at seed 0 for
+each of the six task and row combinations (needs a GPU) and compares the loss with the one logged
+earlier. A seed-0 result is only reused if it prints `6 of 6 matched`.
+
+### Caveats on what the variance means
+
+- The reported spread is fine-tuning variance only. The seed changes the classifier-head
+  initialisation and the data order. Post-training and the PU split are held fixed. The split is drawn
+  at dataset-build time with `seed=42` in `Data_processing.py`, and re-drawing it would invalidate
+  post-training, which trains on the labeled positives only.
+- `α̂` is deterministic given the fixed post-training checkpoint, so it is one number per corpus and
+  carries no seed variance. The spread in the `α̂` row comes entirely from fine-tuning.
+- `torch.backends.cudnn.benchmark` stays enabled. Runs are seed-controlled but not bitwise
+  reproducible, and you should expect small differences across GPUs and driver versions.
 
 ## Reported results
 
