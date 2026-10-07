@@ -203,6 +203,10 @@ class NeuralNetwork(nn.Module):
                     utils.clip_grad_norm_(self.parameters(), max_norm=self.init_clip_max_norm)
 
                 avg_loss += loss.item()
+
+                if self.args.max_batches is not None and i + 1 >= self.args.max_batches:
+                    print(f"stopping after {i + 1} batches (--max-batches)")
+                    return
             cnt = len(train['y']) // self.args.batch_size + 1
             print("Average loss:{:.6f} ".format(avg_loss / cnt))
 
@@ -250,6 +254,7 @@ class NeuralNetwork(nn.Module):
             print("save model!!!\n")
         else:
             self.patience += 1
+        return result
 
     def predict(self, dev):
         self.eval()
