@@ -18,7 +18,7 @@ ROW_LABELS = {
     "pu_estimated": r"PU$_{\mathrm{PT+FT}}$ ($\alpha$=$\hat{\alpha}$)",
 }
 TASK_LABELS = {"ubuntu": "Ubuntu", "e_commerce": "E-Commerce"}
-EXPECTED_SEEDS = 2
+EXPECTED_SEEDS = 3
 
 Aggregate = dict[tuple[str, str], dict[str, tuple[float, float | None, int | None]]]
 
@@ -144,7 +144,7 @@ def main() -> None:
     parser.add_argument("--metrics-dir", default="resources/metrics", type=Path)
     parser.add_argument("--out-dir", default="results", type=Path)
     parser.add_argument("--allow-partial", action="store_true",
-                        help="render groups without exactly 2 seeds, annotated with their count")
+                        help="render groups without exactly 3 seeds, annotated with their count")
     args = parser.parse_args()
 
     agg = aggregate(load_metrics(args.metrics_dir), allow_partial=args.allow_partial)

@@ -15,15 +15,15 @@ def write(dirpath, task, row, seed, r1, source="run"):
 
 
 def test_aggregate_reports_mean_and_sample_std(tmp_path):
-    for seed, r1 in enumerate([0.820, 0.828], start=1):
+    for seed, r1 in enumerate([0.820, 0.824, 0.828]):
         write(tmp_path, "ubuntu", "pu_exact", seed, r1)
 
     agg = aggregate(load_metrics(tmp_path))
     mean, std, n = agg[("ubuntu", "pu_exact")]["R10@1"]
 
     assert mean == pytest.approx(0.824)
-    assert std == pytest.approx(0.008 / 2 ** 0.5, abs=1e-6)
-    assert n == 2
+    assert std == pytest.approx(0.004, abs=1e-6)
+    assert n == 3
 
 
 def test_cited_single_seed_row_has_no_std(tmp_path):
@@ -42,25 +42,27 @@ def test_cited_row_does_not_warn(tmp_path, recwarn):
     assert not any("seeds" in str(w.message) for w in recwarn)
 
 
-def test_fewer_than_two_seeds_is_an_error(tmp_path):
-    write(tmp_path, "ubuntu", "pu_exact", 1, 0.820)
+def test_fewer_than_three_seeds_is_an_error(tmp_path):
+    write(tmp_path, "ubuntu", "pu_exact", 0, 0.820)
+    write(tmp_path, "ubuntu", "pu_exact", 1, 0.824)
 
-    with pytest.raises(ValueError, match="1 of 2 seeds"):
+    with pytest.raises(ValueError, match="2 of 3 seeds"):
         aggregate(load_metrics(tmp_path))
 
 
 def test_allow_partial_annotates_the_seed_count_in_both_renderings(tmp_path):
-    write(tmp_path, "ubuntu", "pu_exact", 1, 0.820)
-    for seed in (1, 2):
+    write(tmp_path, "ubuntu", "pu_exact", 0, 0.820)
+    write(tmp_path, "ubuntu", "pu_exact", 1, 0.824)
+    for seed in range(3):
         write(tmp_path, "ubuntu", "pu_zero", seed, 0.8)
 
-    with pytest.warns(UserWarning, match="1 of 2 seeds"):
+    with pytest.warns(UserWarning, match="2 of 3 seeds"):
         agg = aggregate(load_metrics(tmp_path), allow_partial=True)
 
     markdown, latex = render_markdown(agg), render_latex(agg)
     exact_md = next(line for line in markdown.splitlines() if line.startswith("| pu_exact"))
-    assert "(n=1)" in exact_md and "(n=2)" in next(l for l in markdown.splitlines() if l.startswith("| pu_zero"))
-    assert latex.count("(n=1)") == 3 and "(n=2)" not in latex
+    assert "(n=2)" in exact_md and "(n=3)" in next(l for l in markdown.splitlines() if l.startswith("| pu_zero"))
+    assert latex.count("(n=2)") == 3 and "(n=3)" not in latex
 
 
 def test_cited_row_in_markdown_has_no_seed_count(tmp_path):
@@ -70,7 +72,7 @@ def test_cited_row_in_markdown_has_no_seed_count(tmp_path):
 
 
 def test_fs_pt_ft_must_be_cited(tmp_path):
-    for seed in (1, 2):
+    for seed in range(3):
         write(tmp_path, "ubuntu", "fs_pt_ft", seed, 0.9)
 
     with pytest.raises(ValueError, match="must not be published"):
@@ -78,7 +80,7 @@ def test_fs_pt_ft_must_be_cited(tmp_path):
 
 
 def test_differing_alpha_in_one_group_is_an_error(tmp_path):
-    for seed in (1, 2):
+    for seed in range(3):
         write(tmp_path, "ubuntu", "pu_estimated", seed, 0.82)
     path = tmp_path / "ubuntu_pu_estimated_rPU0.8_seed2.json"
     path.write_text(json.dumps({**json.loads(path.read_text()), "alpha": 0.40}))
@@ -88,7 +90,7 @@ def test_differing_alpha_in_one_group_is_an_error(tmp_path):
 
 
 def test_differing_commit_warns(tmp_path):
-    for seed in (1, 2):
+    for seed in range(3):
         write(tmp_path, "ubuntu", "pu_exact", seed, 0.82)
     path = tmp_path / "ubuntu_pu_exact_rPU0.8_seed2.json"
     path.write_text(json.dumps({**json.loads(path.read_text()), "commit": "abc123"}))
@@ -127,12 +129,12 @@ def test_truncated_file_names_itself(tmp_path):
 
 
 def test_markdown_formats_mean_plus_minus_std(tmp_path):
-    for seed, r1 in enumerate([0.820, 0.828], start=1):
+    for seed, r1 in enumerate([0.820, 0.824, 0.828]):
         write(tmp_path, "ubuntu", "pu_exact", seed, r1)
 
     table = render_markdown(aggregate(load_metrics(tmp_path)))
 
-    assert "0.824 ± 0.006" in table
+    assert "0.824 ± 0.004" in table
 
 
 def test_rows_follow_paper_order_and_key_off_contents(tmp_path):
@@ -150,16 +152,16 @@ def test_rows_follow_paper_order_and_key_off_contents(tmp_path):
 
 
 def test_latex_uses_pm_and_missing_corpus_dash(tmp_path):
-    for seed, r1 in enumerate([0.820, 0.828], start=1):
+    for seed, r1 in enumerate([0.820, 0.824, 0.828]):
         write(tmp_path, "ubuntu", "pu_exact", seed, r1)
 
     table = render_latex(aggregate(load_metrics(tmp_path)))
 
-    assert r"0.824 $\pm$ 0.006" in table and "--" in table and r"\end{tabular}" in table
+    assert r"0.824 $\pm$ 0.004" in table and "--" in table and r"\end{tabular}" in table
 
 
 def test_latex_header_groups_metrics_under_corpora(tmp_path):
-    for seed in (1, 2):
+    for seed in range(3):
         write(tmp_path, "ubuntu", "pu_exact", seed, 0.82)
 
     table = render_latex(aggregate(load_metrics(tmp_path)))
@@ -194,9 +196,9 @@ def test_mixed_cited_and_run_is_an_error(tmp_path):
         aggregate(load_metrics(tmp_path))
 
 
-def test_more_than_two_seeds_is_an_error(tmp_path):
-    for seed in range(3):
+def test_more_than_three_seeds_is_an_error(tmp_path):
+    for seed in range(4):
         write(tmp_path, "ubuntu", "pu_exact", seed, 0.82)
 
-    with pytest.raises(ValueError, match="3 of 2 seeds"):
+    with pytest.raises(ValueError, match="4 of 3 seeds"):
         aggregate(load_metrics(tmp_path))

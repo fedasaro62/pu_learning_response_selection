@@ -1,0 +1,16 @@
+#!/bin/bash
+#SBATCH --job-name=e_commerce_pu_estimated_seed0
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=msteams:dasaro
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=64G
+#SBATCH --time=48:00:00
+#SBATCH --partition=A100
+#SBATCH --gpus=3g.40gb:1
+#SBATCH --output=logs/pu_estimated/e_commerce_seed0.out
+
+# under sbatch $0 is a spooled copy, so rely on the submit dir (submit_all.sh cds to the repo root)
+cd "${SLURM_SUBMIT_DIR:-$(dirname "$0")/../..}"
+source /nfs/home/dasaro/research/innonext-BERT_FP/.venv/bin/activate
+scripts/finetune.sh e_commerce pu estimated 0 0.8
