@@ -36,11 +36,17 @@ def test_validate_args_rejects_supervised_without_rpu():
 
 
 def test_validate_args_allows_zero_shot_without_rpu():
-    validate_args(objective="pu", post_train="zero_shot", rPU=None)
+    validate_args(objective="supervised", post_train="zero_shot", rPU=None)
 
 
 def test_validate_args_allows_original_without_rpu():
-    validate_args(objective="pu", post_train="original", rPU=None)
+    validate_args(objective="supervised", post_train="original", rPU=None)
+
+
+def test_validate_args_rejects_pu_without_rpu():
+    # the PU loss reads the y_pu_<rPU> column, so no rPU fails after the data load otherwise
+    with pytest.raises(SystemExit):
+        validate_args("pu", "original", None)
 
 
 def test_write_metrics_round_trips(tmp_path):
@@ -51,6 +57,8 @@ def test_write_metrics_round_trips(tmp_path):
                   commit="abc123", wall_minutes=874.4)
 
     payload = json.loads(path.read_text())
+    assert set(payload) == {"task", "row", "rPU", "seed", "alpha", "MAP", "MRR", "P@1", "R10@1", "R10@2", "R10@5",
+                            "source", "commit", "wall_minutes"}
     assert payload["R10@1"] == 0.824
     assert payload["R10@5"] == 0.981
     assert payload["commit"] == "abc123"

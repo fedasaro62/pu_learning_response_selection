@@ -26,6 +26,8 @@ def validate_args(objective: str, post_train: str, rPU: float | None) -> None:
             "--rPU is required with --post-train positive_only: it names the checkpoint "
             "(bert_rPU<r>.pt) as well as the PU label column"
         )
+    if rPU is None and objective == "pu":
+        sys.exit("--rPU is required with --objective pu: it selects the y_pu_<rPU> label column the PU loss reads")
 
 
 def write_metrics(path: str, task: str, row: str, rPU: float | None, seed: int, alpha: float | None,
