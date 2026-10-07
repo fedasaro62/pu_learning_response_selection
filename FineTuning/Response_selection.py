@@ -41,8 +41,8 @@ parser.add_argument("--strategy",
                     default='statistical_prior',
                     type=str,
                     choices=['statistical_prior', 'pos_neg_finetune'],
-                    help="The fine-tuning objective: 'statistical_prior' is the PU loss of Eq. 7 with the "
-                         "exact class prior alpha*, 'pos_neg_finetune' is the same loss with alpha=0.")
+                    help="The fine-tuning objective: 'statistical_prior' is the PU loss with the exact "
+                         "class prior alpha*, 'pos_neg_finetune' is the same loss with alpha=0.")
 
 parser.add_argument("--is_training",
                     action='store_true',

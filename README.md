@@ -46,22 +46,22 @@ scripts/post_train.sh e_commerce 0.8
 Writes one checkpoint per epoch under `FPT/PT_checkpoint/positive_only/<task>/checkpoint<n>/`. The
 later stages read epoch 25 for Ubuntu and epoch 34 for E-Commerce, matching the BERT-FP schedule.
 
-### 2. PU fine-tuning (Table 1)
+### 2. PU fine-tuning
 
 ```bash
 scripts/finetune.sh ubuntu pos_neg_finetune  0.8   # PU_PT+FT with alpha = 0
 scripts/finetune.sh ubuntu statistical_prior 0.8   # PU_PT+FT with alpha = alpha*
 ```
 
-`pos_neg_finetune` treats every unlabeled pair as a negative, which is Eq. 7 with `α = 0`.
-`statistical_prior` computes `α*` from the label counts (Eq. 8) and plugs it into Eq. 7. Both
-scripts train, then evaluate R@1, R@2 and R@5 on the test set.
+`pos_neg_finetune` treats every unlabeled pair as a negative, which is the PU loss with `α = 0`.
+`statistical_prior` computes the exact prior `α*` from the label counts and plugs it into the PU
+loss. Both scripts train, then evaluate R@1, R@2 and R@5 on the test set.
 
 Running `statistical_prior` with `--rPU` omitted gives the fully supervised cross-entropy baseline,
 but it then loads Han et al.'s released BERT-FP checkpoint from
 `FPT/PT_checkpoint/original/<task><n>/bert.pt` rather than a checkpoint produced here.
 
-### 3. Our class prior estimator (Table 2, Figure 3)
+### 3. Our class prior estimator
 
 ```bash
 scripts/estimate_prior.sh ubuntu 0.8
@@ -73,7 +73,7 @@ from the post-trained encoder and caches their cosine similarities as
 ratio `α̂(τ)`, picks `τ*` as the centre of the lowest-variance window of 5 consecutive grid points,
 and writes `results/pi_hat_vs_tau_<split>_<task>_rPU0.8.png`.
 
-The estimate printed for the train split is the number reported as *Ours* in Table 2.
+The estimate printed for the train split is the one reported for our estimator below.
 
 | Ubuntu (dev) | E-Commerce (dev) |
 | --- | --- |
@@ -82,7 +82,7 @@ The estimate printed for the train split is the number reported as *Ours* in Tab
 `α̂(τ)` falls from near 1, flattens onto a plateau around the true `α*` (red), then goes noisy once
 the tail empties. The selected `τ*` (black) lands inside that plateau on both corpora.
 
-### 4. Baseline estimators (Table 2)
+### 4. Baseline estimators
 
 ```bash
 scripts/baseline_estimators.sh ubuntu 0.8
@@ -93,7 +93,7 @@ Scott, BBE and DedPU to its output scores. Estimates are appended to
 `PvU/pvu_checkpoint/<task>_rPU0.8_new/{train,dev}_estimate_alpha.csv`, with `α*` recorded in
 `true_alpha.csv` for reference.
 
-### 5. Similarity distributions (Figure 2)
+### 5. Similarity distributions
 
 ```bash
 scripts/plot_similarities.sh ubuntu 0.8
