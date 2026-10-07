@@ -102,9 +102,44 @@ def test_latex_uses_pm_and_missing_corpus_dash(tmp_path):
 
 
 def test_latex_header_groups_metrics_under_corpora(tmp_path):
-    write(tmp_path, "ubuntu", "pu_exact", 0, 0.82)
+    for seed in range(3):
+        write(tmp_path, "ubuntu", "pu_exact", seed, 0.82)
 
     table = render_latex(aggregate(load_metrics(tmp_path)))
 
     assert r"\multicolumn{3}{c}{Ubuntu}" in table and r"\multicolumn{3}{c}{E-Commerce}" in table
     assert r"\cmidrule(lr){2-4} \cmidrule(lr){5-7}" in table
+
+
+@pytest.mark.parametrize("task, row", [("ubuntu", "pu_estimate"), ("mnist", "pu_exact")])
+def test_unknown_task_or_row_is_an_error(tmp_path, task, row):
+    write(tmp_path, task, row, 0, 0.8)
+
+    with pytest.raises(ValueError, match="unknown"):
+        aggregate(load_metrics(tmp_path))
+
+
+def test_mixed_rpu_in_one_group_is_an_error(tmp_path):
+    write(tmp_path, "ubuntu", "pu_exact", 0, 0.82)
+    write(tmp_path, "ubuntu", "pu_exact", 1, 0.82)
+    path = tmp_path / "ubuntu_pu_exact_rPU0.8_seed1.json"
+    path.write_text(json.dumps({**json.loads(path.read_text()), "rPU": 0.5}))
+
+    with pytest.raises(ValueError, match="mixed rPU"):
+        aggregate(load_metrics(tmp_path))
+
+
+def test_mixed_cited_and_run_is_an_error(tmp_path):
+    write(tmp_path, "ubuntu", "fs_pt_ft", 0, 0.9, source="cite:han2021")
+    write(tmp_path, "ubuntu", "fs_pt_ft", 1, 0.8)
+
+    with pytest.raises(ValueError, match="mixed cited"):
+        aggregate(load_metrics(tmp_path))
+
+
+def test_more_than_three_seeds_warns(tmp_path):
+    for seed in range(4):
+        write(tmp_path, "ubuntu", "pu_exact", seed, 0.82)
+
+    with pytest.warns(UserWarning, match="4 of 3 seeds"):
+        aggregate(load_metrics(tmp_path))

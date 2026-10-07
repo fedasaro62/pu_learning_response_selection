@@ -41,6 +41,11 @@ def aggregate(records: list[dict]) -> Aggregate:
     """
     grouped = defaultdict(list)
     for record in records:
+        if record["task"] not in TASKS or record["row"] not in ROW_ORDER:
+            raise ValueError(
+                f"unknown (task, row) = ({record['task']!r}, {record['row']!r}); "
+                f"valid tasks: {TASKS}, valid rows: {ROW_ORDER}"
+            )
         grouped[(record["task"], record["row"])].append(record)
 
     out = {}
@@ -49,8 +54,12 @@ def aggregate(records: list[dict]) -> Aggregate:
         if (duplicate := next((s for s in seeds if seeds.count(s) > 1), None)) is not None:
             raise ValueError(f"duplicate seed {duplicate} for {key[0]}/{key[1]}")
 
-        cited = all(str(r.get("source", "")).startswith("cite:") for r in group)
-        if not cited and len(group) < EXPECTED_SEEDS:
+        if len({r["rPU"] for r in group if r.get("rPU") is not None}) > 1:
+            raise ValueError(f"mixed rPU values for {key[0]}/{key[1]}")
+        is_cite = [str(r.get("source", "")).startswith("cite:") for r in group]
+        if any(is_cite) and not all(is_cite):
+            raise ValueError(f"mixed cited and run records for {key[0]}/{key[1]}")
+        if not all(is_cite) and len(group) != EXPECTED_SEEDS:
             warnings.warn(f"{key[0]}/{key[1]}: {len(group)} of {EXPECTED_SEEDS} seeds present")
 
         out[key] = {
