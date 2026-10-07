@@ -17,6 +17,7 @@ ROW_LABELS = {
     "pu_exact": r"PU$_{\mathrm{PT+FT}}$ ($\alpha$=$\alpha^{\star}$)",
     "pu_estimated": r"PU$_{\mathrm{PT+FT}}$ ($\alpha$=$\hat{\alpha}$)",
 }
+TASK_LABELS = {"ubuntu": "Ubuntu", "e_commerce": "E-Commerce"}
 EXPECTED_SEEDS = 3
 
 Aggregate = dict[tuple[str, str], dict[str, tuple[float, float | None]]]
@@ -77,7 +78,12 @@ def render_markdown(agg: Aggregate) -> str:
 
 
 def render_latex(agg: Aggregate) -> str:
-    lines = [r"\begin{tabular}{l" + "c" * (len(TASKS) * len(METRICS)) + "}", r"\toprule"]
+    n = len(METRICS)
+    spans = [(2 + i * n, 1 + (i + 1) * n) for i in range(len(TASKS))]
+    lines = [r"\begin{tabular}{l" + "c" * (len(TASKS) * n) + "}", r"\toprule"]
+    # plain empty cell above "Setting" instead of \multirow, so no extra package is required
+    lines.append(" & " + " & ".join(rf"\multicolumn{{{n}}}{{c}}{{{TASK_LABELS[t]}}}" for t in TASKS) + r" \\")
+    lines.append(" ".join(rf"\cmidrule(lr){{{a}-{b}}}" for a, b in spans))
     lines.append("Setting & " + " & ".join(rf"$R_{{10}}@{m[-1]}$" for _ in TASKS for m in METRICS) + r" \\")
     lines.append(r"\midrule")
     for row in ROW_ORDER:

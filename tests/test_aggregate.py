@@ -99,3 +99,12 @@ def test_latex_uses_pm_and_missing_corpus_dash(tmp_path):
     table = render_latex(aggregate(load_metrics(tmp_path)))
 
     assert r"0.824 $\pm$ 0.004" in table and "--" in table and r"\end{tabular}" in table
+
+
+def test_latex_header_groups_metrics_under_corpora(tmp_path):
+    write(tmp_path, "ubuntu", "pu_exact", 0, 0.82)
+
+    table = render_latex(aggregate(load_metrics(tmp_path)))
+
+    assert r"\multicolumn{3}{c}{Ubuntu}" in table and r"\multicolumn{3}{c}{E-Commerce}" in table
+    assert r"\cmidrule(lr){2-4} \cmidrule(lr){5-7}" in table
