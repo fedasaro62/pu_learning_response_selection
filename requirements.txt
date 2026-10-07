@@ -9,3 +9,4 @@ tqdm>=4.56.2
 setproctitle>=1.2.2
 cvxopt>=1.2.0
 bitarray>=2.0.0
+pytest>=7.0.0
