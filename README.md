@@ -13,18 +13,6 @@ negatives and no second model.
 The context and response are encoded as one sequence; the final `[CLS]` state is scored by a linear
 layer. Post-training and fine-tuning both run on this backbone.
 
-## What is here
-
-| Component | Path | Role in the paper |
-| --- | --- | --- |
-| PU split construction | `Data_processing.py` | Builds the labeled/unlabeled split and the tokenized corpora |
-| PU post-training | `FPT/BERT_post_training/positive_only/` | Stage 1: MLM + URC on labeled positives only |
-| PU fine-tuning | `FineTuning/` | Stage 2: the PU loss of Eq. 7 |
-| Cosine similarity extraction | `FineTuning/estimate_prior_map.py` | Eq. 6, mean-pooled context and response embeddings |
-| Our class prior estimator | `tools/estimate_alpha.py` | Eqs. 9-10, tail ratio plus stability-based threshold selection |
-| Baseline estimators | `PvU/` | EN, Scott, BBE and DedPU over a positive-versus-unlabeled classifier |
-| Similarity distributions | `tools/plot_similarity_distributions.py` | Matched vs unmatched densities, zero-shot and post-trained |
-
 ## The PU ratio
 
 Throughout the code the flag is `--rPU`, the fraction of positives *hidden* in the unlabeled pool.
@@ -138,21 +126,6 @@ Class prior estimates against `α* = 0.444` on both corpora:
 | Scott | 0.236 | 0.208 | 0.507 | 0.063 |
 | BBE | 0.356 | 0.088 | 0.471 | 0.027 |
 | Ours | 0.435 | 0.009 | 0.459 | 0.015 |
-
-## Notes and caveats
-
-- The fully supervised row of Table 1 is quoted from Han et al. and was not re-run here.
-- Checkpoint selection is hardcoded per corpus in `CHECKPOINTS` (Ubuntu 25, E-Commerce 34). Change
-  it there if you post-train for a different number of epochs.
-- The extracted class prior loaded by the paper's PU fine-tuning is `α*`, not `α̂`. The estimator of
-  Section 3.3 is evaluated against `α*` rather than substituted into the loss, so Table 1 and
-  Table 2 are independent experiments.
-- Douban was dropped from this release because the paper reports only Ubuntu and E-Commerce. Some
-  task dictionaries still carry a `douban` entry inherited from the original codebase; those code
-  paths are untested here.
-- Relative to the research codebase, `statistical_prior.py` now loads its post-trained checkpoint
-  from `FPT/PT_checkpoint/<post_train>/<task>/...`, the same layout the other stages use. This
-  changes only where the weights are read from, not what is trained.
 
 ## Attribution
 
