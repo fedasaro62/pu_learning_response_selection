@@ -49,3 +49,12 @@ def test_load_estimated_prior_rejects_a_dev_split_estimate(tmp_path, monkeypatch
 
     with pytest.raises(ValueError, match="split"):
         priors.load_estimated_prior("ubuntu", 0.8)
+
+
+def test_prior_map_path_always_carries_the_split_infix():
+    assert priors.prior_map_path("d/", 0.8, "train").name == "prior_map_cosine_rPU0.8_train.json"
+    assert priors.prior_map_path("d", 0.8, "dev").name == "prior_map_cosine_rPU0.8_dev.json"
+
+
+def test_prior_map_path_without_split_keeps_the_legacy_name():
+    assert priors.prior_map_path("d", 0.8).name == "prior_map_cosine_rPU0.8.json"

@@ -19,10 +19,11 @@ def test_aggregate_reports_mean_and_sample_std(tmp_path):
         write(tmp_path, "ubuntu", "pu_exact", seed, r1)
 
     agg = aggregate(load_metrics(tmp_path))
-    mean, std = agg[("ubuntu", "pu_exact")]["R10@1"]
+    mean, std, n = agg[("ubuntu", "pu_exact")]["R10@1"]
 
     assert mean == pytest.approx(0.824)
     assert std == pytest.approx(0.004, abs=1e-6)
+    assert n == 3
 
 
 def test_cited_single_seed_row_has_no_std(tmp_path):
@@ -30,7 +31,7 @@ def test_cited_single_seed_row_has_no_std(tmp_path):
 
     agg = aggregate(load_metrics(tmp_path))
 
-    assert agg[("ubuntu", "fs_pt_ft")]["R10@1"] == (pytest.approx(0.911), None)
+    assert agg[("ubuntu", "fs_pt_ft")]["R10@1"] == (pytest.approx(0.911), None, None)
 
 
 def test_cited_row_does_not_warn(tmp_path, recwarn):
@@ -41,13 +42,71 @@ def test_cited_row_does_not_warn(tmp_path, recwarn):
     assert not any("seeds" in str(w.message) for w in recwarn)
 
 
-def test_fewer_than_three_seeds_warns(tmp_path, recwarn):
+def test_fewer_than_three_seeds_is_an_error(tmp_path):
     write(tmp_path, "ubuntu", "pu_exact", 0, 0.820)
     write(tmp_path, "ubuntu", "pu_exact", 1, 0.824)
 
-    aggregate(load_metrics(tmp_path))
+    with pytest.raises(ValueError, match="2 of 3 seeds"):
+        aggregate(load_metrics(tmp_path))
 
-    assert any("2 of 3 seeds" in str(w.message) for w in recwarn)
+
+def test_allow_partial_annotates_the_seed_count_in_both_renderings(tmp_path):
+    write(tmp_path, "ubuntu", "pu_exact", 0, 0.820)
+    write(tmp_path, "ubuntu", "pu_exact", 1, 0.824)
+    for seed in range(3):
+        write(tmp_path, "ubuntu", "pu_zero", seed, 0.8)
+
+    with pytest.warns(UserWarning, match="2 of 3 seeds"):
+        agg = aggregate(load_metrics(tmp_path), allow_partial=True)
+
+    markdown, latex = render_markdown(agg), render_latex(agg)
+    exact_md = next(line for line in markdown.splitlines() if line.startswith("| pu_exact"))
+    assert "(n=2)" in exact_md and "(n=3)" in next(l for l in markdown.splitlines() if l.startswith("| pu_zero"))
+    assert latex.count("(n=2)") == 3 and "(n=3)" not in latex
+
+
+def test_cited_row_in_markdown_has_no_seed_count(tmp_path):
+    write(tmp_path, "ubuntu", "fs_pt_ft", 0, 0.911, source="cite:han2021")
+
+    assert "n=" not in render_markdown(aggregate(load_metrics(tmp_path)))
+
+
+def test_fs_pt_ft_must_be_cited(tmp_path):
+    for seed in range(3):
+        write(tmp_path, "ubuntu", "fs_pt_ft", seed, 0.9)
+
+    with pytest.raises(ValueError, match="must not be published"):
+        aggregate(load_metrics(tmp_path))
+
+
+def test_differing_alpha_in_one_group_is_an_error(tmp_path):
+    for seed in range(3):
+        write(tmp_path, "ubuntu", "pu_estimated", seed, 0.82)
+    path = tmp_path / "ubuntu_pu_estimated_rPU0.8_seed2.json"
+    path.write_text(json.dumps({**json.loads(path.read_text()), "alpha": 0.40}))
+
+    with pytest.raises(ValueError, match="mixed alpha"):
+        aggregate(load_metrics(tmp_path))
+
+
+def test_differing_commit_warns(tmp_path):
+    for seed in range(3):
+        write(tmp_path, "ubuntu", "pu_exact", seed, 0.82)
+    path = tmp_path / "ubuntu_pu_exact_rPU0.8_seed2.json"
+    path.write_text(json.dumps({**json.loads(path.read_text()), "commit": "abc123"}))
+
+    with pytest.warns(UserWarning, match="different commits"):
+        aggregate(load_metrics(tmp_path))
+
+
+def test_empty_metrics_dir_is_an_error(tmp_path):
+    with pytest.raises(ValueError, match="no metrics records"):
+        load_metrics(tmp_path)
+
+
+def test_missing_metrics_dir_is_an_error(tmp_path):
+    with pytest.raises(ValueError, match="no metrics records"):
+        load_metrics(tmp_path / "absent")
 
 
 def test_duplicate_seed_is_an_error(tmp_path):
@@ -137,9 +196,9 @@ def test_mixed_cited_and_run_is_an_error(tmp_path):
         aggregate(load_metrics(tmp_path))
 
 
-def test_more_than_three_seeds_warns(tmp_path):
+def test_more_than_three_seeds_is_an_error(tmp_path):
     for seed in range(4):
         write(tmp_path, "ubuntu", "pu_exact", seed, 0.82)
 
-    with pytest.warns(UserWarning, match="4 of 3 seeds"):
+    with pytest.raises(ValueError, match="4 of 3 seeds"):
         aggregate(load_metrics(tmp_path))

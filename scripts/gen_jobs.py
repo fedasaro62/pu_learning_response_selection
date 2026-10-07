@@ -18,6 +18,8 @@ TEMPLATE = """#!/bin/bash
 #SBATCH --gpus=3g.40gb:1
 #SBATCH --output=logs/{row}/{task}_seed{seed}.out
 
+# under sbatch $0 is a spooled copy, so rely on the submit dir (submit_all.sh cds to the repo root)
+cd "${{SLURM_SUBMIT_DIR:-$(dirname "$0")/../..}}"
 source {venv_path}
 scripts/finetune.sh {task} {objective} {prior} {seed} {rpu}
 """
@@ -91,7 +93,7 @@ def _generate_submit_script(
             prior_file = f"resources/prior/alpha_hat_{task}_rPU{RPU}_train.json"
             lines.append(f'if [[ -f "{prior_file}" ]]; then')
             lines.append(f'    sbatch "{path}"')
-            lines.append(f'    ((submitted++))')
+            lines.append(f'    submitted=$((submitted + 1))')
             lines.append(f'else')
             lines.append(
                 f'    echo "SKIP {path}: missing prior file {prior_file}"'
@@ -99,14 +101,14 @@ def _generate_submit_script(
             lines.append(
                 f'    echo "      produce it with: scripts/estimate_prior.sh {task} {RPU}"'
             )
-            lines.append(f'    ((skipped++))')
+            lines.append(f'    skipped=$((skipped + 1))')
             lines.append(
                 f'    skipped_jobs="${{skipped_jobs}} {path}"'
             )
             lines.append(f'fi')
         else:
             lines.append(f'sbatch "{path}"')
-            lines.append(f'((submitted++))')
+            lines.append(f'submitted=$((submitted + 1))')
 
     lines.extend([
         "",

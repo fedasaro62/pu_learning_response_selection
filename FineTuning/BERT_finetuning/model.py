@@ -21,6 +21,7 @@ from Metrics import Metrics
 
 from .data import BERTDataset
 from .losses import pu_loss, supervised_loss
+from .priors import prior_map_path
 
 CHECKPOINTS = {'ubuntu': 25, 'douban': 27, 'e_commerce': 34}
 
@@ -96,10 +97,7 @@ class NeuralNetwork(nn.Module):
         Returns mapping of sample indices to sigmoid-transformed similarity scores.
         """
         dirpath = os.path.dirname(self.args.save_path)
-        if split is not None:
-            prior_file = os.path.join(dirpath, f'prior_map_cosine_rPU{self.args.rPU}_{split}.json')
-        else:
-            prior_file = os.path.join(dirpath, f'prior_map_cosine_rPU{self.args.rPU}.json')
+        prior_file = str(prior_map_path(dirpath, self.args.rPU, split))
         if os.path.exists(prior_file):
             print(f"Loading prior map from {prior_file}...")
             with open(prior_file, 'r') as f:

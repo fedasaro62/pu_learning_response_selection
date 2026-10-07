@@ -5,6 +5,8 @@
 # Needs a GPU. Usage: scripts/check_equivalence.sh [python_interpreter]
 set -uo pipefail
 
+cd "$(dirname "$0")/.."
+
 PYTHON="${1:-/nfs/home/dasaro/research/innonext-BERT_FP/.venv/bin/python}"
 
 run() {

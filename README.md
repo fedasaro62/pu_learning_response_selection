@@ -80,7 +80,8 @@ python FineTuning/Response_selection.py --task ubuntu --post-train original --ob
 ```
 
 It loads the checkpoint from `FPT/PT_checkpoint/original/<task><n>/bert.pt`, and its metrics are
-recorded under the `fs_pt_ft` row, so it populates the fully supervised row of the table. A
+recorded under the `fs_pt_ft` row. That run is a sanity check only: the table's `FS_PT+FT` row is cited
+from Han et al., and `tools/aggregate_table.py` refuses any `fs_pt_ft` record that is not `cite:`-sourced. A
 `--post-train zero_shot` run is tagged `zero_shot_ft`, which is not a paper row, and
 `tools/aggregate_table.py` rejects it as unknown.
 
@@ -92,7 +93,7 @@ scripts/estimate_prior.sh ubuntu 0.8
 
 This runs two steps per split. First it extracts the mean-pooled context and response embeddings
 from the post-trained encoder and caches their cosine similarities as
-`prior_map_cosine_rPU0.8[_dev].json`. Then it sweeps `τ` over `{0.50, ..., 0.90}`, computes the tail
+`prior_map_cosine_rPU0.8_{train,dev}.json`. Then it sweeps `τ` over `{0.50, ..., 0.90}`, computes the tail
 ratio `α̂(τ)`, picks `τ*` as the centre of the lowest-variance window of 5 consecutive grid points,
 and writes `results/pi_hat_vs_tau_<split>_<task>_rPU0.8.png`.
 
@@ -146,14 +147,15 @@ total (seed 0 of the three pre-existing rows is reused, see below). Order matter
    virtualenv path, so edit the `#SBATCH` header and `VENV_PATH` at the top of `scripts/gen_jobs.py`
    for your setup, or just run the `scripts/finetune.sh` line each job contains.
 3. Run `python tools/aggregate_table.py`. It reads the per-run metrics and writes `results/table1.md`
-   and `results/table1.tex` with mean ± std over seeds. It rejects unknown rows and mixed `rPU`
-   groups rather than averaging them.
+   and `results/table1.tex` with mean ± std over seeds. It rejects unknown rows, mixed `rPU` or `alpha`
+   groups, and any run group without exactly three seeds rather than averaging them.
 
-Seed 0 of `supervised`, `pu zero` and `pu exact` comes from the campaign that produced the original
-table, so only seeds 1 and 2 are re-run for those rows, while `pu estimated` runs all three. Before
-trusting that reuse, `scripts/check_equivalence.sh` re-runs the first training batch at seed 0 for
-each of the six task and row combinations (needs a GPU) and compares the loss with the one logged
-earlier. A seed-0 result is only reused if it prints `6 of 6 matched`.
+The job matrix assumes seed 0 of `supervised`, `pu zero` and `pu exact` can be reused from the campaign
+that produced the original table, so only seeds 1 and 2 are generated for those rows. **This reuse is
+unverified** until `scripts/check_equivalence.sh` (needs a GPU) re-runs the first training batch at seed 0
+for the six task and row combinations and reports `6 of 6 matched`. Those seed-0 metrics records do not
+exist in the repo yet, so until they are added to `resources/metrics/`, `tools/aggregate_table.py` stops
+with an error on the 2-seed groups (`--allow-partial` renders them annotated with their seed count).
 
 ### Caveats on what the variance means
 

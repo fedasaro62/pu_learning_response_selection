@@ -59,7 +59,7 @@ parser.add_argument("--learning_rate",
                     help="The initial learning rate for Adamw.")
 parser.add_argument("--epochs",
                     default=2,
-                    type=float,
+                    type=int,
                     help="Total number of training epochs to perform.")
 parser.add_argument("--save_path",
                     default="./FineTuning/FT_checkpoint/",

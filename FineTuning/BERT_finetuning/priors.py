@@ -17,6 +17,12 @@ def estimated_prior_path(task: str, rPU: float, split: str = "train") -> Path:
     return PRIOR_DIR / f"alpha_hat_{task}_rPU{rPU}_{split}.json"
 
 
+def prior_map_path(dirpath: str | Path, rPU: float, split: str | None = None) -> Path:
+    """Single owner of the cached similarity-map filename, shared by its writer and reader."""
+    suffix = f"_{split}" if split is not None else ""
+    return Path(dirpath) / f"prior_map_cosine_rPU{rPU}{suffix}.json"
+
+
 def load_estimated_prior(task: str, rPU: float) -> float:
     path = estimated_prior_path(task, rPU)
     if not path.exists():

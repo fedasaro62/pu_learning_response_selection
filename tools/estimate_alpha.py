@@ -6,12 +6,17 @@ import pickle
 from dataclasses import dataclass
 from pathlib import Path
 import argparse
+import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 
-from FineTuning.BERT_finetuning.priors import estimated_prior_path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from FineTuning.BERT_finetuning.priors import PRIOR_DIR, estimated_prior_path, prior_map_path  # noqa: E402
+
+STABLE_TAU_WINDOW = 5
 
 
 @dataclass
@@ -133,14 +138,8 @@ def main() -> None:
         train, dev, _ = pickle.load(f, encoding="ISO-8859-1")
 
     prior_map_base = f"{args.save_path}/positive_only/{args.task}/fixed_prior/"
-    if args.split == "dev":
-        prior_map_path = f"{prior_map_base}prior_map_cosine_rPU{args.rpu}_dev.json"
-        data = dev
-    else:
-        prior_map_path = f"{prior_map_base}prior_map_cosine_rPU{args.rpu}.json"
-        data = train
-
-    with open(prior_map_path, "r") as f:
+    data = {"train": train, "dev": dev}[args.split]
+    with open(prior_map_path(prior_map_base, args.rpu, args.split), "r") as f:
         prior_map = json.load(f)
 
     taus = np.arange(0.5, 0.91, 0.01)
@@ -150,7 +149,7 @@ def main() -> None:
         [estimate_pi_threshold(pos_scores, unlab_scores, tau=t) for t in taus],
         dtype=float,
     )
-    stable_tau, stable_pi = select_stable_tau(taus, pi_hats, window=5)
+    stable_tau, stable_pi = select_stable_tau(taus, pi_hats, window=STABLE_TAU_WINDOW)
 
     sns.set_theme(style="whitegrid", context="talk")
     plt.figure(figsize=(5.5, 3))
@@ -185,8 +184,8 @@ def main() -> None:
     os.makedirs("results", exist_ok=True)
     plt.savefig(f"results/pi_hat_vs_tau_{args.split}_{args.task}_rPU{args.rpu}.png", dpi=300)
 
-    written = write_estimate(Path("resources/prior"), args.task, args.rpu, args.split,
-                             stable_tau, stable_pi, alpha, 5, args.score_transform,
+    written = write_estimate(PRIOR_DIR, args.task, args.rpu, args.split,
+                             stable_tau, stable_pi, alpha, STABLE_TAU_WINDOW, args.score_transform,
                              taus, pi_hats)
     print(f"wrote {written}")
 

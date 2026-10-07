@@ -10,5 +10,7 @@
 #SBATCH --gpus=3g.40gb:1
 #SBATCH --output=logs/pu_exact/e_commerce_seed2.out
 
+# under sbatch $0 is a spooled copy, so rely on the submit dir (submit_all.sh cds to the repo root)
+cd "${SLURM_SUBMIT_DIR:-$(dirname "$0")/../..}"
 source /nfs/home/dasaro/research/innonext-BERT_FP/.venv/bin/activate
 scripts/finetune.sh e_commerce pu exact 2 0.8
