@@ -11,9 +11,9 @@ from gen_jobs import PLAN, TASKS
 def test_expected_file_count() -> None:
     """verify that PLAN and TASKS produce the expected number of job files."""
     expected_count = sum(len(seeds) * len(TASKS) for _, _, _, seeds in PLAN)
-    assert expected_count == 18, (
-        f"PLAN implies {expected_count} files, not 18; "
-        f"check that sum({[len(seeds) for _, _, _, seeds in PLAN]} * {len(TASKS)}) == 18"
+    assert expected_count == 16, (
+        f"PLAN implies {expected_count} files, not 16; "
+        f"check that sum({[len(seeds) for _, _, _, seeds in PLAN]} * {len(TASKS)}) == 16"
     )
 
 

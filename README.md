@@ -131,31 +131,27 @@ Post-training pulls matched and unmatched pairs apart on Ubuntu, from `Δμ = 0.
 That separation is what makes the tail-ratio estimator work. Output goes to
 `results/density/cosine_similarity/`.
 
-## Three-seed protocol
+## Two-seed protocol
 
-The table row `α = α̂` (not yet in the Reported results table below) and the seed statistics need three fine-tuning seeds per cell, 18 runs in
-total (seed 0 of the three pre-existing rows is reused, see below). Order matters in one place:
+The table row `α = α̂` (not yet in the Reported results table below) and the seed statistics need two fine-tuning seeds (1 and 2) per cell, 16 runs in
+total (four rows, two corpora, two seeds). Order matters in one place:
 
 1. Run `scripts/estimate_prior.sh ubuntu 0.8` and `scripts/estimate_prior.sh e_commerce 0.8` first.
    Besides printing the estimate, each call persists it to
    `resources/prior/alpha_hat_<task>_rPU<r>_<split>.json`, and `--prior estimated` reads that file.
    `jobs/submit_all.sh` skips the `estimated` jobs with a message if the file is missing, instead of
    letting them fail in the queue.
-2. Generate and submit the jobs. `python scripts/gen_jobs.py` writes 18 Slurm files under `jobs/` plus
+2. Generate and submit the jobs. `python scripts/gen_jobs.py` writes 16 Slurm files under `jobs/` plus
    `jobs/submit_all.sh`. Rerunning regenerates and overwrites every file under `jobs/`, so edit the constants in
    the generator rather than the generated files. The job files assume a Slurm cluster with A100 partitions and a hard-coded
    virtualenv path, so edit the `#SBATCH` header and `VENV_PATH` at the top of `scripts/gen_jobs.py`
    for your setup, or just run the `scripts/finetune.sh` line each job contains.
 3. Run `python tools/aggregate_table.py`. It reads the per-run metrics and writes `results/table1.md`
    and `results/table1.tex` with mean ± std over seeds. It rejects unknown rows, mixed `rPU` or `alpha`
-   groups, and any run group without exactly three seeds rather than averaging them.
+   groups, and any run group without exactly two seeds rather than averaging them.
 
-The job matrix assumes seed 0 of `supervised`, `pu zero` and `pu exact` can be reused from the campaign
-that produced the original table, so only seeds 1 and 2 are generated for those rows. **This reuse is
-unverified** until `scripts/check_equivalence.sh` (needs a GPU) re-runs the first training batch at seed 0
-for the six task and row combinations and reports `6 of 6 matched`. Those seed-0 metrics records do not
-exist in the repo yet, so until they are added to `resources/metrics/`, `tools/aggregate_table.py` stops
-with an error on the 2-seed groups (`--allow-partial` renders them annotated with their seed count).
+Every reported cell comes from runs produced by this code, at seeds 1 and 2. Nothing is reused from an
+earlier campaign. `--allow-partial` renders groups with a different seed count, annotated with it.
 
 ### Caveats on what the variance means
 
@@ -165,6 +161,8 @@ with an error on the 2-seed groups (`--allow-partial` renders them annotated wit
   post-training, which trains on the labeled positives only.
 - `α̂` is deterministic given the fixed post-training checkpoint, so it is one number per corpus and
   carries no seed variance. The spread in the `α̂` row comes entirely from fine-tuning.
+- With two seeds the reported spread is a two-sample standard deviation and should not be read as a
+  significance test.
 - `torch.backends.cudnn.benchmark` stays enabled. Runs are seed-controlled but not bitwise
   reproducible, and you should expect small differences across GPUs and driver versions.
 

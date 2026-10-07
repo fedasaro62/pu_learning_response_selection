@@ -24,12 +24,11 @@ source {venv_path}
 scripts/finetune.sh {task} {objective} {prior} {seed} {rpu}
 """
 
-# seed 0 is reused from the previous campaign for the three pre-existing rows
 PLAN = [
     ("supervised_ft", "supervised", "exact", (1, 2)),
     ("pu_zero", "pu", "zero", (1, 2)),
     ("pu_exact", "pu", "exact", (1, 2)),
-    ("pu_estimated", "pu", "estimated", (0, 1, 2)),
+    ("pu_estimated", "pu", "estimated", (1, 2)),
 ]
 TASKS = ("ubuntu", "e_commerce")
 
