@@ -4,11 +4,14 @@ import json
 import os
 import pickle
 from dataclasses import dataclass
+from pathlib import Path
 import argparse
 
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
+
+from FineTuning.BERT_finetuning.priors import estimated_prior_path
 
 
 @dataclass
@@ -91,6 +94,23 @@ def select_stable_tau(taus: np.ndarray, pi_hats: np.ndarray, window: int = 5) ->
     return float(taus[best_idx]), float(pi_hats[best_idx])
 
 
+def write_estimate(prior_dir: Path, task: str, rpu: float, split: str, tau_star: float,
+                   alpha_hat: float, alpha_exact: float, window: int, score_transform: str,
+                   taus: np.ndarray, pi_hats: np.ndarray) -> Path:
+    prior_dir.mkdir(parents=True, exist_ok=True)
+    path = prior_dir / estimated_prior_path(task, rpu, split).name
+    payload = {
+        "task": task, "rPU": rpu, "split": split,
+        "tau_star": float(tau_star), "alpha_hat": float(alpha_hat),
+        "alpha_exact": float(alpha_exact), "window": window,
+        "score_transform": score_transform,
+        "taus": [round(float(t), 2) for t in taus],
+        "alpha_of_tau": [float(p) for p in pi_hats],
+    }
+    path.write_text(json.dumps(payload, indent=2))
+    return path
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Estimate alpha using stable tau.")
     parser.add_argument("--task", choices=["ubuntu", "douban", "e_commerce"], default=Args.task)
@@ -164,6 +184,11 @@ def main() -> None:
     plt.tight_layout(pad=0.6)
     os.makedirs("results", exist_ok=True)
     plt.savefig(f"results/pi_hat_vs_tau_{args.split}_{args.task}_rPU{args.rpu}.png", dpi=300)
+
+    written = write_estimate(Path("resources/prior"), args.task, args.rpu, args.split,
+                             stable_tau, stable_pi, alpha, 5, args.score_transform,
+                             taus, pi_hats)
+    print(f"wrote {written}")
 
     print(f"[{args.split.upper()}] alpha={alpha:.4f}")
     print(
