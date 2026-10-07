@@ -1,0 +1,14 @@
+#!/bin/bash
+#SBATCH --job-name=ubuntu_pu_zero_seed2
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=msteams:dasaro
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=64G
+#SBATCH --time=48:00:00
+#SBATCH --partition=A100
+#SBATCH --gpus=3g.40gb:1
+#SBATCH --output=logs/pu_zero/ubuntu_seed2.out
+
+source /nfs/home/dasaro/research/innonext-BERT_FP/.venv/bin/activate
+scripts/finetune.sh ubuntu pu zero 2 0.8
