@@ -1,0 +1,35 @@
+# byte-compiled
+__pycache__/
+*.py[cod]
+*$py.class
+
+# environments
+.venv/
+venv/
+env/
+ENV/
+.env
+
+# corpora and derived artifacts (download separately, see data/README.md)
+data/*/*.txt
+data/*/*.pkl
+data/*/*.zip
+data/*/*.tar.gz
+
+# model checkpoints and scores
+FPT/PT_checkpoint/
+FineTuning/FT_checkpoint/
+PvU/pvu_checkpoint/
+*.pt
+
+# experiment outputs
+results/
+logs/
+
+# notebooks
+.ipynb_checkpoints/
+
+# editors
+.idea/
+.vscode/
+.DS_Store

@@ -1,0 +1,37 @@
+PU Learning for Response Selection
+==================================
+
+This repository contains the reference implementation for the paper
+"Positive-Unlabeled Learning for Response Selection".
+
+It builds on, and redistributes code from, the following projects.
+
+
+1. BERT-FP (Fine-grained Post-training for Improving Retrieval-based
+   Dialogue Systems)
+   --------------------------------------------------------------------
+   Janghoon Han, Taesuk Hong, Byoungjae Kim, Youngjoong Ko, Jungyun Seo.
+   NAACL-HLT 2021.
+   Source: https://github.com/hanjanghoon/BERT_FP
+
+   The post-training stage (FPT/), the fine-tuning stage
+   (FineTuning/Response_selection.py, FineTuning/Metrics.py,
+   FineTuning/BERT_finetuning/) and the data pipeline (Data_processing.py)
+   are derived from that repository and modified to support the
+   positive-unlabeled setting described in our paper.
+
+
+2. PU_learning (Mixture Proportion Estimation and PU Learning:
+   A Modern Approach)
+   --------------------------------------------------------------------
+   Saurabh Garg, Yifan Wu, Alex Smola, Sivaraman Balakrishnan,
+   Zachary C. Lipton. NeurIPS 2021.
+   Source: https://github.com/acmi-lab/PU_learning
+   Licensed under the Apache License, Version 2.0.
+
+   The mixture-proportion-estimation baselines in PvU/estimators/
+   (EN_estimator.py, scott.py, KM.py, TIcE.py, dedpul.py, dedpulUtils.py)
+   are taken from that repository. BBE_estimator.py is adapted from its
+   estimator.py.
+
+   A copy of the Apache License, Version 2.0 is included in LICENSE.
