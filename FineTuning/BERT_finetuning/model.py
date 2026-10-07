@@ -44,12 +44,13 @@ def seed_everything(seed: int) -> None:
 
 
 def post_trained_checkpoint(post_train: str, task: str, ckpt: int, rPU: float | None) -> str | None:
-    paths = {
+    special = {
         'zero_shot': lambda: None,
         'original': lambda: f"./FPT/PT_checkpoint/original/{task}{ckpt}/bert.pt",
-        'positive_only': lambda: f"./FPT/PT_checkpoint/positive_only/{task}/checkpoint{ckpt}/bert_rPU{rPU}.pt",
     }
-    return paths[post_train]()
+    if post_train in special:
+        return special[post_train]()
+    return f"./FPT/PT_checkpoint/{post_train}/{task}/checkpoint{ckpt}/bert_rPU{rPU}.pt"
 
 
 

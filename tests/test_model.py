@@ -11,6 +11,12 @@ def test_post_trained_checkpoint_for_pu_post_training():
     assert path == "./FPT/PT_checkpoint/positive_only/ubuntu/checkpoint25/bert_rPU0.8.pt"
 
 
+def test_post_trained_checkpoint_for_positive_and_unlabeled_post_training():
+    path = post_trained_checkpoint("positive_and_unlabeled", "ubuntu", 25, 0.8)
+
+    assert path == "./FPT/PT_checkpoint/positive_and_unlabeled/ubuntu/checkpoint25/bert_rPU0.8.pt"
+
+
 def test_post_trained_checkpoint_for_the_released_han_checkpoint():
     path = post_trained_checkpoint("original", "e_commerce", 34, 0.8)
 
