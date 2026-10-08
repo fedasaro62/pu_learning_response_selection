@@ -1,0 +1,15 @@
+#!/bin/bash
+#SBATCH --job-name=est_e_commerce
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=msteams:dasaro
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=64G
+#SBATCH --time=12:00:00
+#SBATCH --partition=A100
+#SBATCH --gpus=3g.40gb:1
+#SBATCH --output=logs/estimate_prior/e_commerce.out
+
+cd "${SLURM_SUBMIT_DIR:-$(dirname "$0")/../..}"
+source /nfs/home/dasaro/research/innonext-BERT_FP/.venv/bin/activate
+scripts/estimate_prior.sh e_commerce 0.8
