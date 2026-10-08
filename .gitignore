@@ -33,3 +33,6 @@ logs/
 .idea/
 .vscode/
 .DS_Store
+
+# subagent-driven-development scratch workspace
+.superpowers/
