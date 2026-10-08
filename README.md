@@ -139,13 +139,18 @@ total (four rows, two corpora, three seeds). Order matters in one place:
 1. Run `scripts/estimate_prior.sh ubuntu 0.8` and `scripts/estimate_prior.sh e_commerce 0.8` first.
    Besides printing the estimate, each call persists it to
    `resources/prior/alpha_hat_<task>_rPU<r>_<split>.json`, and `--prior estimated` reads that file.
-   `jobs/submit_all.sh` skips the `estimated` jobs with a message if the file is missing, instead of
-   letting them fail in the queue.
-2. Generate and submit the jobs. `python scripts/gen_jobs.py` writes 24 Slurm files under `jobs/` plus
-   `jobs/submit_all.sh`. Rerunning regenerates and overwrites every file under `jobs/`, so edit the constants in
-   the generator rather than the generated files. The job files assume a Slurm cluster with A100 partitions and a hard-coded
-   virtualenv path, so edit the `#SBATCH` header and `VENV_PATH` at the top of `scripts/gen_jobs.py`
-   for your setup, or just run the `scripts/finetune.sh` line each job contains.
+   `jobs/submit_all.sh` handles this ordering itself (see step 2).
+2. Generate and submit the jobs. `python scripts/gen_jobs.py` writes four Slurm files plus `jobs/submit_all.sh`:
+   `jobs/estimate_prior.job` (array, one element per corpus), `jobs/train_main.job` (array of 18: the supervised,
+   zero-prior and exact-prior rows), `jobs/train_estimated.job` (array of 6: the estimated-prior row) and
+   `jobs/equivalence.job` (a single diagnostic job). Each array element prints its configuration first, since
+   the log name `logs/<group>/<array id>_<index>.out` does not identify the run. `jobs/submit_all.sh` submits
+   `train_main.job`, then `train_estimated.job`: directly if both prior files exist, otherwise after
+   `estimate_prior.job` with `--dependency=afterok`. It does not submit `equivalence.job`; run
+   `sbatch jobs/equivalence.job` yourself. Rerunning the generator overwrites every file under `jobs/`, so edit
+   the constants in the generator rather than the generated files. The job files assume a Slurm cluster with A100
+   partitions and a hard-coded virtualenv path, so edit the `#SBATCH` header and `VENV_PATH` in
+   `scripts/gen_jobs.py` for your setup, or just run the `scripts/finetune.sh` line each job contains.
 3. Run `python tools/aggregate_table.py`. It reads the per-run metrics and writes `results/table1.md`
    and `results/table1.tex` with mean ± std over seeds. It rejects unknown rows, mixed `rPU` or `alpha`
    groups, and any run group without exactly three seeds rather than averaging them.

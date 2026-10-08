@@ -1,112 +1,40 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Change to repo root so relative paths work
 cd "$(dirname "$0")/.."
 
-# Create all required log directories
-mkdir -p "logs/pu_estimated"
-mkdir -p "logs/pu_exact"
-mkdir -p "logs/pu_zero"
-mkdir -p "logs/supervised_ft"
+mkdir -p logs/estimate_prior logs/train_main logs/train_estimated logs/equivalence
 
 submitted=0
-skipped=0
-skipped_jobs=
+summary=""
 
-sbatch "jobs/supervised_ft/ubuntu_seed0.job"
+main_id=$(sbatch --parsable jobs/train_main.job)
 submitted=$((submitted + 1))
-sbatch "jobs/supervised_ft/ubuntu_seed1.job"
-submitted=$((submitted + 1))
-sbatch "jobs/supervised_ft/ubuntu_seed2.job"
-submitted=$((submitted + 1))
-sbatch "jobs/supervised_ft/e_commerce_seed0.job"
-submitted=$((submitted + 1))
-sbatch "jobs/supervised_ft/e_commerce_seed1.job"
-submitted=$((submitted + 1))
-sbatch "jobs/supervised_ft/e_commerce_seed2.job"
-submitted=$((submitted + 1))
-sbatch "jobs/pu_zero/ubuntu_seed0.job"
-submitted=$((submitted + 1))
-sbatch "jobs/pu_zero/ubuntu_seed1.job"
-submitted=$((submitted + 1))
-sbatch "jobs/pu_zero/ubuntu_seed2.job"
-submitted=$((submitted + 1))
-sbatch "jobs/pu_zero/e_commerce_seed0.job"
-submitted=$((submitted + 1))
-sbatch "jobs/pu_zero/e_commerce_seed1.job"
-submitted=$((submitted + 1))
-sbatch "jobs/pu_zero/e_commerce_seed2.job"
-submitted=$((submitted + 1))
-sbatch "jobs/pu_exact/ubuntu_seed0.job"
-submitted=$((submitted + 1))
-sbatch "jobs/pu_exact/ubuntu_seed1.job"
-submitted=$((submitted + 1))
-sbatch "jobs/pu_exact/ubuntu_seed2.job"
-submitted=$((submitted + 1))
-sbatch "jobs/pu_exact/e_commerce_seed0.job"
-submitted=$((submitted + 1))
-sbatch "jobs/pu_exact/e_commerce_seed1.job"
-submitted=$((submitted + 1))
-sbatch "jobs/pu_exact/e_commerce_seed2.job"
-submitted=$((submitted + 1))
-if [[ -f "resources/prior/alpha_hat_ubuntu_rPU0.8_train.json" ]]; then
-    sbatch "jobs/pu_estimated/ubuntu_seed0.job"
-    submitted=$((submitted + 1))
+summary="${summary}  train_main.job       array $main_id"$'
+'
+
+prior_files=("resources/prior/alpha_hat_ubuntu_rPU0.8_train.json" "resources/prior/alpha_hat_e_commerce_rPU0.8_train.json")
+missing=0
+for f in "${prior_files[@]}"; do
+    [[ -f "$f" ]] || missing=$((missing + 1))
+done
+
+if [[ $missing -eq 0 ]]; then
+    echo "prior files present: submitting train_estimated.job with no dependency"
+    estimated_id=$(sbatch --parsable jobs/train_estimated.job)
 else
-    echo "SKIP jobs/pu_estimated/ubuntu_seed0.job: missing prior file resources/prior/alpha_hat_ubuntu_rPU0.8_train.json"
-    echo "      produce it with: scripts/estimate_prior.sh ubuntu 0.8"
-    skipped=$((skipped + 1))
-    skipped_jobs="${skipped_jobs} jobs/pu_estimated/ubuntu_seed0.job"
-fi
-if [[ -f "resources/prior/alpha_hat_ubuntu_rPU0.8_train.json" ]]; then
-    sbatch "jobs/pu_estimated/ubuntu_seed1.job"
+    echo "prior files missing ($missing): submitting estimate_prior.job first, train_estimated.job waits on it"
+    estimate_id=$(sbatch --parsable jobs/estimate_prior.job)
     submitted=$((submitted + 1))
-else
-    echo "SKIP jobs/pu_estimated/ubuntu_seed1.job: missing prior file resources/prior/alpha_hat_ubuntu_rPU0.8_train.json"
-    echo "      produce it with: scripts/estimate_prior.sh ubuntu 0.8"
-    skipped=$((skipped + 1))
-    skipped_jobs="${skipped_jobs} jobs/pu_estimated/ubuntu_seed1.job"
+    summary="${summary}  estimate_prior.job   array $estimate_id"$'
+'
+    estimated_id=$(sbatch --parsable --dependency=afterok:"$estimate_id" jobs/train_estimated.job)
 fi
-if [[ -f "resources/prior/alpha_hat_ubuntu_rPU0.8_train.json" ]]; then
-    sbatch "jobs/pu_estimated/ubuntu_seed2.job"
-    submitted=$((submitted + 1))
-else
-    echo "SKIP jobs/pu_estimated/ubuntu_seed2.job: missing prior file resources/prior/alpha_hat_ubuntu_rPU0.8_train.json"
-    echo "      produce it with: scripts/estimate_prior.sh ubuntu 0.8"
-    skipped=$((skipped + 1))
-    skipped_jobs="${skipped_jobs} jobs/pu_estimated/ubuntu_seed2.job"
-fi
-if [[ -f "resources/prior/alpha_hat_e_commerce_rPU0.8_train.json" ]]; then
-    sbatch "jobs/pu_estimated/e_commerce_seed0.job"
-    submitted=$((submitted + 1))
-else
-    echo "SKIP jobs/pu_estimated/e_commerce_seed0.job: missing prior file resources/prior/alpha_hat_e_commerce_rPU0.8_train.json"
-    echo "      produce it with: scripts/estimate_prior.sh e_commerce 0.8"
-    skipped=$((skipped + 1))
-    skipped_jobs="${skipped_jobs} jobs/pu_estimated/e_commerce_seed0.job"
-fi
-if [[ -f "resources/prior/alpha_hat_e_commerce_rPU0.8_train.json" ]]; then
-    sbatch "jobs/pu_estimated/e_commerce_seed1.job"
-    submitted=$((submitted + 1))
-else
-    echo "SKIP jobs/pu_estimated/e_commerce_seed1.job: missing prior file resources/prior/alpha_hat_e_commerce_rPU0.8_train.json"
-    echo "      produce it with: scripts/estimate_prior.sh e_commerce 0.8"
-    skipped=$((skipped + 1))
-    skipped_jobs="${skipped_jobs} jobs/pu_estimated/e_commerce_seed1.job"
-fi
-if [[ -f "resources/prior/alpha_hat_e_commerce_rPU0.8_train.json" ]]; then
-    sbatch "jobs/pu_estimated/e_commerce_seed2.job"
-    submitted=$((submitted + 1))
-else
-    echo "SKIP jobs/pu_estimated/e_commerce_seed2.job: missing prior file resources/prior/alpha_hat_e_commerce_rPU0.8_train.json"
-    echo "      produce it with: scripts/estimate_prior.sh e_commerce 0.8"
-    skipped=$((skipped + 1))
-    skipped_jobs="${skipped_jobs} jobs/pu_estimated/e_commerce_seed2.job"
-fi
+submitted=$((submitted + 1))
+summary="${summary}  train_estimated.job  array $estimated_id"$'
+'
 
 echo ""
-echo "Summary: $submitted submitted, $skipped skipped"
-if [[ $skipped -gt 0 ]]; then
-    echo "Skipped jobs:$skipped_jobs"
-fi
+echo "Summary: $submitted array jobs submitted"
+printf "%s" "$summary"
+echo "equivalence.job is not submitted here, launch it separately: sbatch jobs/equivalence.job"

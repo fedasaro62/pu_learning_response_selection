@@ -8,13 +8,60 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 from gen_jobs import PLAN, TASKS
 
 
-def test_expected_file_count() -> None:
-    """verify that PLAN and TASKS produce the expected number of job files."""
+JOB_FILES = ("estimate_prior.job", "train_main.job", "train_estimated.job", "equivalence.job", "submit_all.sh")
+COMMITTED = Path(__file__).parent.parent / "jobs"
+
+
+def _array_bound_and_configs(text: str) -> tuple[int, list[str]]:
+    import re
+
+    bound = int(re.search(r"^#SBATCH --array=0-(\d+)$", text, re.M).group(1))
+    block = re.search(r"^CONFIGS=\(\n(.*?)\n\)$", text, re.M | re.S).group(1)
+    return bound, block.splitlines()
+
+
+def test_expected_training_config_count() -> None:
+    """verify that PLAN and TASKS imply 24 training runs."""
     expected_count = sum(len(seeds) * len(TASKS) for _, _, _, seeds in PLAN)
-    assert expected_count == 24, (
-        f"PLAN implies {expected_count} files, not 24; "
-        f"check that sum({[len(seeds) for _, _, _, seeds in PLAN]} * {len(TASKS)}) == 24"
-    )
+    assert expected_count == 24
+
+
+def test_generated_files_exist(tmp_path, monkeypatch) -> None:
+    import gen_jobs
+
+    monkeypatch.chdir(tmp_path)
+    gen_jobs.main()
+    assert {p.name for p in (tmp_path / "jobs").iterdir()} == set(JOB_FILES)
+
+
+def test_array_bounds_match_configs() -> None:
+    for name in ("estimate_prior.job", "train_main.job", "train_estimated.job"):
+        bound, configs = _array_bound_and_configs((COMMITTED / name).read_text())
+        assert bound == len(configs) - 1, name
+    assert "--array" not in (COMMITTED / "equivalence.job").read_text()
+
+
+def test_training_arrays_cover_the_whole_plan() -> None:
+    total = sum(len(_array_bound_and_configs((COMMITTED / n).read_text())[1])
+                for n in ("train_main.job", "train_estimated.job"))
+    assert total == sum(len(seeds) * len(TASKS) for _, _, _, seeds in PLAN) == 24
+
+
+def test_estimated_prior_only_in_estimated_array() -> None:
+    _, main = _array_bound_and_configs((COMMITTED / "train_main.job").read_text())
+    _, est = _array_bound_and_configs((COMMITTED / "train_estimated.job").read_text())
+    assert not any("estimated" in c for c in main)
+    assert all("estimated" in c for c in est)
+    assert len(set(main + est)) == len(main) + len(est)
+
+
+def test_jobs_cd_one_level_up_and_print_config() -> None:
+    for name in ("estimate_prior.job", "train_main.job", "train_estimated.job", "equivalence.job"):
+        text = (COMMITTED / name).read_text()
+        assert 'cd "${SLURM_SUBMIT_DIR:-$(dirname "$0")/..}"' in text, name
+    for name in ("estimate_prior.job", "train_main.job", "train_estimated.job"):
+        text = (COMMITTED / name).read_text()
+        assert text.index('echo "config: ') < text.index("scripts/"), name
 
 
 def test_plan_row_tags_are_unique() -> None:
@@ -59,10 +106,10 @@ def test_submit_script_counters_survive_set_e(tmp_path):
 
     import gen_jobs
 
-    monkey_written = [(Path("a.job"), "r", "ubuntu", "pu", "zero", 1)] * 3
-    body = gen_jobs._generate_submit_script(monkey_written, set(), PLAN, TASKS)
+    body = gen_jobs.render_submit_script()
     assert "((" not in body.replace("$((", "")
-    arithmetic = [line for line in body.splitlines() if "submitted=$((" in line]
+    arithmetic = [line.strip() for line in body.splitlines() if line.strip().startswith("submitted=$((")]
+    assert len(arithmetic) == 3
     result = subprocess.run(
         ["bash", "-c", "set -euo pipefail; submitted=0\n" + "\n".join(arithmetic) + "\necho $submitted"],
         capture_output=True, text=True,
