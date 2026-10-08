@@ -106,6 +106,18 @@ The estimate printed for the train split is the one reported for our estimator b
 `α̂(τ)` falls from near 1, flattens onto a plateau around the true `α*` (red), then goes noisy once
 the tail empties. The selected `τ*` (black) lands inside that plateau on both corpora.
 
+### 3b. Window sensitivity of `τ*`
+
+```bash
+uv run tools/ablate_window.py            # --split train --rpu 0.8 --windows 3 5 7 9 11
+```
+
+`w = 5` was chosen by inspecting the curves. This tool re-runs `select_stable_tau` from
+`tools/estimate_alpha.py` for each window on the persisted `resources/prior/alpha_hat_<task>_rPU0.8_<split>.json`
+curves (no GPU, no recomputation of the curve) and writes `resources/window_ablation.{md,tex}`: `τ*`, `α̂(τ*)`
+and `|Δ| = |α̂ − α*|` per window and corpus, with the paper's window marked. Read the table as-is; whether
+`τ*` moves with `w` is an outcome of the data. Use `--split dev` to compare against the dev curves.
+
 ### 4. Baseline estimators
 
 ```bash
