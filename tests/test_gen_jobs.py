@@ -5,7 +5,7 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
-from gen_jobs import PLAN, TASKS
+from gen_jobs import MAX_CONCURRENT_ARRAY_ELEMENTS, PLAN, TASKS
 
 
 JOB_FILES = ("estimate_prior.job", "train_main.job", "train_estimated.job", "equivalence.job", "submit_all.sh")
@@ -15,7 +15,7 @@ COMMITTED = Path(__file__).parent.parent / "jobs"
 def _array_bound_and_configs(text: str) -> tuple[int, list[str]]:
     import re
 
-    bound = int(re.search(r"^#SBATCH --array=0-(\d+)$", text, re.M).group(1))
+    bound = int(re.search(r"^#SBATCH --array=0-(\d+)(?:%\d+)?$", text, re.M).group(1))
     block = re.search(r"^CONFIGS=\(\n(.*?)\n\)$", text, re.M | re.S).group(1)
     return bound, block.splitlines()
 
@@ -115,3 +115,24 @@ def test_submit_script_counters_survive_set_e(tmp_path):
         capture_output=True, text=True,
     )
     assert result.returncode == 0 and result.stdout.strip() == "3"
+
+
+def test_arrays_are_throttled() -> None:
+    import re
+
+    for name in ("estimate_prior.job", "train_main.job", "train_estimated.job"):
+        text = (COMMITTED / name).read_text()
+        lines = re.findall(r"^#SBATCH --array=.*$", text, re.M)
+        assert len(lines) == 1, name
+        assert re.fullmatch(rf"#SBATCH --array=0-\d+%{MAX_CONCURRENT_ARRAY_ELEMENTS}", lines[0]), lines[0]
+    assert MAX_CONCURRENT_ARRAY_ELEMENTS == 4
+
+
+def test_equivalence_job_has_no_array_line() -> None:
+    assert "--array" not in (COMMITTED / "equivalence.job").read_text()
+
+
+def test_submit_script_does_not_override_the_throttle() -> None:
+    sbatch_lines = [line for line in (COMMITTED / "submit_all.sh").read_text().splitlines() if "sbatch" in line]
+    assert sbatch_lines
+    assert not any("--array" in line or " -a " in line for line in sbatch_lines)

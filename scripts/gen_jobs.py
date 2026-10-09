@@ -5,6 +5,8 @@ from pathlib import Path
 
 VENV_PATH = "/nfs/home/dasaro/research/innonext-BERT_FP/.venv/bin/activate"
 RPU = 0.8
+# matches both the account's MaxJobs limit and the number of 3g.40gb gpus on the cluster
+MAX_CONCURRENT_ARRAY_ELEMENTS = 4
 
 HEADER = """#!/bin/bash
 #SBATCH --job-name={name}
@@ -60,7 +62,7 @@ def train_configs(rows: set[str]) -> list[tuple[str, str, str, int]]:
 def render_array(group: str, name: str, time: str, fields: tuple[str, ...], configs: list[tuple], command: str) -> str:
     """Render an array job script whose index selects a line of the CONFIGS bash array."""
     header = HEADER.format(name=name, time=time, group=group, log_name="%A_%a",
-                           array=f"#SBATCH --array=0-{len(configs) - 1}\n")
+                           array=f"#SBATCH --array=0-{len(configs) - 1}%{MAX_CONCURRENT_ARRAY_ELEMENTS}\n")
     body = ARRAY_BODY.format(
         venv_path=VENV_PATH,
         configs="\n".join(f'  "{" ".join(map(str, c))}"' for c in configs),
