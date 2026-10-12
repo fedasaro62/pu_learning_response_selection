@@ -48,21 +48,14 @@ later stages read epoch 25 for Ubuntu and epoch 34 for E-Commerce, matching the 
 
 ### 2. Fine-tuning
 
-Two flags decide what a fine-tuning run is, and they are independent. `--post-train` picks which
-checkpoint is loaded (`positive_only` is ours from step 1, `original` is Han et al.'s released
-BERT-FP, `zero_shot` is the plain pretrained encoder). `--objective` picks the loss: `pu` is the PU
-loss over the partially labeled targets, `supervised` is plain cross-entropy over the full labels.
-The old `--strategy` flag is gone, and so is the old coupling where `--rPU` silently chose both the
-checkpoint and the loss. That coupling made PU post-training followed by supervised fine-tuning
-unreachable from the command line; it is now just `--post-train positive_only --objective supervised`.
-
-For the `pu` objective, `--prior` sets `α`: `zero` treats every unlabeled pair as a negative, `exact`
-uses `α*` computed from the label counts, and `estimated` uses our `α̂` from step 3. The prior is
-ignored under `supervised`.
+Two independent flags decide what a run is. `--post-train` picks the checkpoint (`positive_only`
+from step 1, `original` for Han et al.'s released BERT-FP, `zero_shot` for the plain encoder), and
+`--objective` picks the loss (`pu` or `supervised`). For `pu`, `--prior` sets `α`: `zero` treats
+every unlabeled pair as a negative, `exact` computes `α*` from the label counts, and `estimated`
+reads our `α̂` from step 3.
 
 `scripts/finetune.sh` takes `task objective prior seed rPU`, always loads our post-trained
-checkpoint, and trains and then evaluates R@1, R@2 and R@5 on the test set. The four table rows that
-use it are:
+checkpoint, and reports R@1, R@2 and R@5 on the test set:
 
 ```bash
 scripts/finetune.sh ubuntu supervised exact     0 0.8   # PU_PT + FS_FT
@@ -71,19 +64,12 @@ scripts/finetune.sh ubuntu pu         exact     0 0.8   # PU_PT+FT, alpha = alph
 scripts/finetune.sh ubuntu pu         estimated 0 0.8   # PU_PT+FT, alpha = alpha-hat
 ```
 
-The fully supervised baseline of Han et al. is not a `finetune.sh` run, because that script always
-loads our checkpoint. Call the entrypoint directly; `--rPU` is optional for this combination since
-neither the checkpoint nor the loss needs it:
+The `FS_PT+FT` row is cited from Han et al. rather than re-run. To reproduce it as a sanity check,
+call the entrypoint directly (`--rPU` is not needed, since neither the checkpoint nor the loss uses it):
 
 ```bash
 python FineTuning/Response_selection.py --task ubuntu --post-train original --objective supervised --seed 0 --is_training
 ```
-
-It loads the checkpoint from `FPT/PT_checkpoint/original/<task><n>/bert.pt`, and its metrics are
-recorded under the `fs_pt_ft` row. That run is a sanity check only: the table's `FS_PT+FT` row is cited
-from Han et al., and `tools/aggregate_table.py` refuses any `fs_pt_ft` record that is not `cite:`-sourced. A
-`--post-train zero_shot` run is tagged `zero_shot_ft`, which is not a paper row, and
-`tools/aggregate_table.py` rejects it as unknown.
 
 ### 3. Our class prior estimator
 
@@ -91,32 +77,18 @@ from Han et al., and `tools/aggregate_table.py` refuses any `fs_pt_ft` record th
 scripts/estimate_prior.sh ubuntu 0.8
 ```
 
-This runs two steps per split. First it extracts the mean-pooled context and response embeddings
-from the post-trained encoder and caches their cosine similarities as
-`prior_map_cosine_rPU0.8_{train,dev}.json`. Then it sweeps `τ` over `{0.50, ..., 0.90}`, computes the tail
-ratio `α̂(τ)`, picks `τ*` as the centre of the lowest-variance window of 5 consecutive grid points,
-and writes `results/pi_hat_vs_tau_<split>_<task>_rPU0.8.png`.
+Extracts the mean-pooled context and response embeddings from the post-trained encoder, caches their
+cosine similarities, then sweeps `τ` over `{0.50, ..., 0.90}`, computes the tail ratio `α̂(τ)` and
+picks `τ*` as the centre of the lowest-variance window of 5 consecutive grid points. The estimate is
+written to `resources/prior/alpha_hat_<task>_rPU<r>_<split>.json`, which `--prior estimated` reads,
+so run this before any `estimated` fine-tuning. The train-split estimate is the one reported below.
 
-The estimate printed for the train split is the one reported for our estimator below.
-
-| Ubuntu (dev) | E-Commerce (dev) |
+| Ubuntu (train) | E-Commerce (train) |
 | --- | --- |
-| ![](docs/alpha_vs_tau_ubuntu_dev.png) | ![](docs/alpha_vs_tau_e_commerce_dev.png) |
+| ![](docs/alpha_vs_tau_ubuntu_train.png) | ![](docs/alpha_vs_tau_e_commerce_train.png) |
 
 `α̂(τ)` falls from near 1, flattens onto a plateau around the true `α*` (red), then goes noisy once
 the tail empties. The selected `τ*` (black) lands inside that plateau on both corpora.
-
-### 3b. Window sensitivity of `τ*`
-
-```bash
-uv run tools/ablate_window.py            # --split train --rpu 0.8 --windows 3 5 7 9 11
-```
-
-`w = 5` was chosen by inspecting the curves. This tool re-runs `select_stable_tau` from
-`tools/estimate_alpha.py` for each window on the persisted `resources/prior/alpha_hat_<task>_rPU0.8_<split>.json`
-curves (no GPU, no recomputation of the curve) and writes `resources/window_ablation.{md,tex}`: `τ*`, `α̂(τ*)`
-and `|Δ| = |α̂ − α*|` per window and corpus, with the paper's window marked. Read the table as-is; whether
-`τ*` moves with `w` is an outcome of the data. Use `--split dev` to compare against the dev curves.
 
 ### 4. Baseline estimators
 
@@ -140,12 +112,11 @@ scripts/plot_similarities.sh ubuntu 0.8
 | ![](docs/similarity_zero_shot.png) | ![](docs/similarity_post_trained.png) |
 
 Post-training pulls matched and unmatched pairs apart on Ubuntu, from `Δμ = 0.028` to `Δμ = 0.112`.
-That separation is what makes the tail-ratio estimator work. Output goes to
-`results/density/cosine_similarity/`.
+That separation is what makes the tail-ratio estimator work.
 
 ## Reported results
 
-Response selection under `β = 10%`, for orientation when re-running:
+Response selection under `β = 10%`, averaged over three fine-tuning seeds:
 
 | Setting | Ubuntu R@1 | Ubuntu R@2 | Ubuntu R@5 | E-Commerce R@1 | E-Commerce R@2 | E-Commerce R@5 |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -163,6 +134,9 @@ Class prior estimates against `α* = 0.444` on both corpora:
 | Scott | 0.236 | 0.208 | 0.507 | 0.063 |
 | BBE | 0.356 | 0.088 | 0.471 | 0.027 |
 | Ours | 0.435 | 0.009 | 0.459 | 0.015 |
+
+`tools/aggregate_table.py` rebuilds the first table from the per-run metrics; `scripts/gen_jobs.py`
+generates the Slurm arrays for all 24 runs.
 
 ## Attribution
 
