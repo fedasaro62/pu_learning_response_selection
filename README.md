@@ -143,44 +143,6 @@ Post-training pulls matched and unmatched pairs apart on Ubuntu, from `Δμ = 0.
 That separation is what makes the tail-ratio estimator work. Output goes to
 `results/density/cosine_similarity/`.
 
-## Three-seed protocol
-
-The table row `α = α̂` and the seed statistics need three fine-tuning seeds (0, 1 and 2) per cell, 24 runs in
-total (four rows, two corpora, three seeds). Order matters in one place:
-
-1. Run `scripts/estimate_prior.sh ubuntu 0.8` and `scripts/estimate_prior.sh e_commerce 0.8` first.
-   Besides printing the estimate, each call persists it to
-   `resources/prior/alpha_hat_<task>_rPU<r>_<split>.json`, and `--prior estimated` reads that file.
-   `jobs/submit_all.sh` handles this ordering itself (see step 2).
-2. Generate and submit the jobs. `python scripts/gen_jobs.py` writes four Slurm files plus `jobs/submit_all.sh`:
-   `jobs/estimate_prior.job` (array, one element per corpus), `jobs/train_main.job` (array of 18: the supervised,
-   zero-prior and exact-prior rows), `jobs/train_estimated.job` (array of 6: the estimated-prior row) and
-   `jobs/equivalence.job` (a single diagnostic job). Each array element prints its configuration first, since
-   the log name `logs/<group>/<array id>_<index>.out` does not identify the run. `jobs/submit_all.sh` submits
-   `train_main.job`, then `train_estimated.job`: directly if both prior files exist, otherwise after
-   `estimate_prior.job` with `--dependency=afterok`. It does not submit `equivalence.job`; run
-   `sbatch jobs/equivalence.job` yourself. Rerunning the generator overwrites every file under `jobs/`, so edit
-   the constants in the generator rather than the generated files. The job files assume a Slurm cluster with A100
-   partitions and a virtualenv at `.venv` in the repo root (if yours lives elsewhere, `export PU_VENV=<venv dir>`
-   before `sbatch`), so edit the `#SBATCH` header in `scripts/gen_jobs.py` for your setup, or just run the `scripts/finetune.sh` line each job contains.
-3. Run `python tools/aggregate_table.py`. It reads the per-run metrics and writes `results/table1.md`
-   and `results/table1.tex` with mean ± std over seeds. It rejects unknown rows, mixed `rPU` or `alpha`
-   groups, and any run group without exactly three seeds rather than averaging them.
-
-Every reported cell comes from runs produced by this code, at seeds 0, 1 and 2. Nothing is reused from an
-earlier campaign. `--allow-partial` renders groups with a different seed count, annotated with it.
-
-### Caveats on what the variance means
-
-- The reported spread is fine-tuning variance only. The seed changes the classifier-head
-  initialisation and the data order. Post-training and the PU split are held fixed. The split is drawn
-  at dataset-build time with `seed=42` in `Data_processing.py`, and re-drawing it would invalidate
-  post-training, which trains on the labeled positives only.
-- `α̂` is deterministic given the fixed post-training checkpoint, so it is one number per corpus and
-  carries no seed variance. The spread in the `α̂` row comes entirely from fine-tuning.
-- `torch.backends.cudnn.benchmark` stays enabled. Runs are seed-controlled but not bitwise
-  reproducible, and you should expect small differences across GPUs and driver versions.
-
 ## Reported results
 
 Response selection under `β = 10%`, for orientation when re-running:
