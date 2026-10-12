@@ -145,7 +145,7 @@ That separation is what makes the tail-ratio estimator work. Output goes to
 
 ## Three-seed protocol
 
-The table row `α = α̂` (not yet in the Reported results table below) and the seed statistics need three fine-tuning seeds (0, 1 and 2) per cell, 24 runs in
+The table row `α = α̂` and the seed statistics need three fine-tuning seeds (0, 1 and 2) per cell, 24 runs in
 total (four rows, two corpora, three seeds). Order matters in one place:
 
 1. Run `scripts/estimate_prior.sh ubuntu 0.8` and `scripts/estimate_prior.sh e_commerce 0.8` first.
@@ -188,9 +188,10 @@ Response selection under `β = 10%`, for orientation when re-running:
 | Setting | Ubuntu R@1 | Ubuntu R@2 | Ubuntu R@5 | E-Commerce R@1 | E-Commerce R@2 | E-Commerce R@5 |
 | --- | --- | --- | --- | --- | --- | --- |
 | Fully supervised (Han et al.) | 0.911 | 0.962 | 0.994 | 0.870 | 0.956 | 0.993 |
-| PU post-training + supervised fine-tuning | 0.877 | 0.941 | 0.988 | 0.775 | 0.913 | 0.987 |
+| PU post-training + supervised fine-tuning | 0.877 | 0.941 | 0.988 | 0.780 | 0.907 | 0.986 |
 | Fully PU, `α = 0` | 0.813 | 0.909 | 0.975 | 0.544 | 0.765 | 0.954 |
 | Fully PU, `α = α*` | 0.824 | 0.918 | 0.981 | 0.667 | 0.852 | 0.972 |
+| **Fully PU, `α = α̂`** | **0.816** | **0.916** | **0.981** | **0.646** | **0.826** | **0.964** |
 
 Class prior estimates against `α* = 0.444` on both corpora:
 

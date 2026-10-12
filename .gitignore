@@ -36,3 +36,4 @@ logs/
 
 # subagent-driven-development scratch workspace
 .superpowers/
+resources/
