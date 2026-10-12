@@ -1240,7 +1240,7 @@ Six runs from the previous campaign become seed 0 of the new table, plus the cit
 
 - [ ] **Step 1: Write the backfill script**
 
-`scripts/backfill_seed0.py`. The values below are the final `Evaluation Result` lines from `/nfs/home/dasaro/research/innonext-BERT_FP/logs/`, in `(MAP, MRR, P@1, R10@1, R10@2, R10@5)` order:
+`scripts/backfill_seed0.py`. The values below are the final `Evaluation Result` lines from `<prior-working-copy>/logs/`, in `(MAP, MRR, P@1, R10@1, R10@2, R10@5)` order:
 
 ```python
 from __future__ import annotations
@@ -1248,7 +1248,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-LOGS = "innonext-BERT_FP/logs"
+LOGS = "<prior-working-copy>/logs"
 
 RUNS = [
     ("ubuntu", "pu_exact", 0.4444, (0.891904, 0.891904, 0.82434, 0.82434, 0.91782, 0.98096),
@@ -1336,10 +1336,10 @@ The gate before any long job runs. If a check fails, **stop and report** — do 
 - [ ] **Step 1: Wire the data and checkpoints in**
 
 ```bash
-ln -s /nfs/home/dasaro/research/innonext-BERT_FP/data/ubuntu_data/dataset_1M.pkl data/ubuntu_data/dataset_1M.pkl
-ln -s /nfs/home/dasaro/research/innonext-BERT_FP/data/e_commerce_data/dataset_1M.pkl data/e_commerce_data/dataset_1M.pkl
-ln -s /nfs/projects/innonext/models/BERT_FP_PU/PT_checkpoint FPT/PT_checkpoint
-ln -s /nfs/projects/innonext/models/BERT_FP_PU/FT_checkpoint FineTuning/FT_checkpoint
+ln -s <prior-working-copy>/data/ubuntu_data/dataset_1M.pkl data/ubuntu_data/dataset_1M.pkl
+ln -s <prior-working-copy>/data/e_commerce_data/dataset_1M.pkl data/e_commerce_data/dataset_1M.pkl
+ln -s <shared-checkpoint-store>/PT_checkpoint FPT/PT_checkpoint
+ln -s <shared-checkpoint-store>/FT_checkpoint FineTuning/FT_checkpoint
 ```
 
 - [ ] **Step 2: Verify the links resolve and are gitignored**
@@ -1465,8 +1465,6 @@ from pathlib import Path
 
 TEMPLATE = """#!/bin/bash
 #SBATCH --job-name={task}_{row}_seed{seed}
-#SBATCH --mail-type=ALL
-#SBATCH --mail-user=msteams:dasaro
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=64G

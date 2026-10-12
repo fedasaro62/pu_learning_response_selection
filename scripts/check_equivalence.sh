@@ -7,7 +7,7 @@ set -uo pipefail
 
 cd "$(dirname "$0")/.."
 
-PYTHON="${1:-/nfs/home/dasaro/research/innonext-BERT_FP/.venv/bin/python}"
+PYTHON="${1:-${PU_VENV:-.venv}/bin/python}"
 
 run() {
     local task="$1" objective="$2" prior="$3" expected="$4"

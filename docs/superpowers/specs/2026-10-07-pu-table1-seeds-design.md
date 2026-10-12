@@ -21,7 +21,7 @@ Two additions to Table 1 of *Positive-Unlabeled Learning for Response Selection*
 
 The `PU_PT + FS_FT` row (Ubuntu 0.877/0.941/0.988, E-Commerce 0.775/0.913/0.987) is not
 reachable from any flag combination in the released code. Its run logs
-(`innonext-BERT_FP/logs/statistical_prior/*_fully_supervised.out`) show an argv identical
+(`<prior-working-copy>/logs/statistical_prior/*_fully_supervised.out`) show an argv identical
 to the `α=α*` run — same `--rPU 0.8 --strategy statistical_prior`, printing the same
 `Estimated prior: 0.4444` — yet different results. It was produced by hand-editing
 `statistical_prior.py` to call `compute_fully_supervised_loss`.
@@ -203,7 +203,7 @@ Each file holds:
 ```
 
 The six reused seed-0 runs (three rows on two corpora) get the same file backfilled from
-the logs, with `"source": "log:innonext-BERT_FP/logs/<dir>/<file>.out"`, so their
+the logs, with `"source": "log:<prior-working-copy>/logs/<dir>/<file>.out"`, so their
 provenance is recorded in the artifact rather than only in the commit message. For those,
 `commit` is `null` and `MAP`/`MRR`/`P@1` are filled where the log records them — the logs
 do carry all six values, but the schema permits `null` so a backfill is never blocked by a
@@ -297,8 +297,8 @@ This repo has no data or checkpoints. It gains symlinks matching the live copy:
 ```
 data/ubuntu_data/dataset_1M.pkl      -> the built pickle
 data/e_commerce_data/dataset_1M.pkl  -> the built pickle
-FPT/PT_checkpoint                    -> /nfs/projects/innonext/models/BERT_FP_PU/PT_checkpoint
-FineTuning/FT_checkpoint             -> /nfs/projects/innonext/models/BERT_FP_PU/FT_checkpoint
+FPT/PT_checkpoint                    -> <shared-checkpoint-store>/PT_checkpoint
+FineTuning/FT_checkpoint             -> <shared-checkpoint-store>/FT_checkpoint
 ```
 
 All four are already gitignored.

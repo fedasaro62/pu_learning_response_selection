@@ -70,13 +70,22 @@ def test_plan_row_tags_are_unique() -> None:
     assert len(tags) == len(set(tags)), f"duplicate row tags in PLAN: {tags}"
 
 
-def test_venv_path_exists() -> None:
-    """verify that the configured venv path exists."""
-    from gen_jobs import VENV_PATH
-    venv_activate = Path(VENV_PATH)
-    assert venv_activate.exists(), (
-        f"venv not found at {VENV_PATH}; jobs would fail at startup"
-    )
+def test_jobs_activate_venv_through_shell_expansion() -> None:
+    """verify that the venv location is a runtime expansion, never a committed path."""
+    for name in ("estimate_prior.job", "train_main.job", "train_estimated.job"):
+        assert 'source "${PU_VENV:-.venv}/bin/activate"' in (COMMITTED / name).read_text(), name
+    assert "${PU_VENV:-.venv}/bin/python" in (COMMITTED.parent / "scripts" / "check_equivalence.sh").read_text()
+
+
+def test_generated_files_leak_no_identity() -> None:
+    import gen_jobs
+
+    for name, text in gen_jobs.generate_jobs().items():
+        assert "mail-user" not in text and "mail-type" not in text, name
+        assert "/nfs/" not in text, name
+    for name in JOB_FILES:
+        text = (COMMITTED / name).read_text()
+        assert "mail-user" not in text and "/nfs/" not in text, name
 
 
 def test_rpu_is_consistent() -> None:

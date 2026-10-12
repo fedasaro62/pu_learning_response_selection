@@ -3,15 +3,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
-VENV_PATH = "/nfs/home/dasaro/research/innonext-BERT_FP/.venv/bin/activate"
+# shell expansion written verbatim into the job files: PU_VENV overrides the default repo-root .venv at submit time
+VENV_ACTIVATE = '"${PU_VENV:-.venv}/bin/activate"'
 RPU = 0.8
 # matches both the account's MaxJobs limit and the number of 3g.40gb gpus on the cluster
 MAX_CONCURRENT_ARRAY_ELEMENTS = 4
 
 HEADER = """#!/bin/bash
 #SBATCH --job-name={name}
-#SBATCH --mail-type=ALL
-#SBATCH --mail-user=msteams:dasaro
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=64G
@@ -24,7 +23,7 @@ HEADER = """#!/bin/bash
 cd "${{SLURM_SUBMIT_DIR:-$(dirname "$0")/..}}"
 """
 
-ARRAY_BODY = """source {venv_path}
+ARRAY_BODY = """source {venv_activate}
 CONFIGS=(
 {configs}
 )
@@ -64,7 +63,7 @@ def render_array(group: str, name: str, time: str, fields: tuple[str, ...], conf
     header = HEADER.format(name=name, time=time, group=group, log_name="%A_%a",
                            array=f"#SBATCH --array=0-{len(configs) - 1}%{MAX_CONCURRENT_ARRAY_ELEMENTS}\n")
     body = ARRAY_BODY.format(
-        venv_path=VENV_PATH,
+        venv_activate=VENV_ACTIVATE,
         configs="\n".join(f'  "{" ".join(map(str, c))}"' for c in configs),
         fields=" ".join(fields),
         echo=" ".join(f"{f.lower()}=${f}" for f in fields),

@@ -161,8 +161,8 @@ total (four rows, two corpora, three seeds). Order matters in one place:
    `estimate_prior.job` with `--dependency=afterok`. It does not submit `equivalence.job`; run
    `sbatch jobs/equivalence.job` yourself. Rerunning the generator overwrites every file under `jobs/`, so edit
    the constants in the generator rather than the generated files. The job files assume a Slurm cluster with A100
-   partitions and a hard-coded virtualenv path, so edit the `#SBATCH` header and `VENV_PATH` in
-   `scripts/gen_jobs.py` for your setup, or just run the `scripts/finetune.sh` line each job contains.
+   partitions and a virtualenv at `.venv` in the repo root (if yours lives elsewhere, `export PU_VENV=<venv dir>`
+   before `sbatch`), so edit the `#SBATCH` header in `scripts/gen_jobs.py` for your setup, or just run the `scripts/finetune.sh` line each job contains.
 3. Run `python tools/aggregate_table.py`. It reads the per-run metrics and writes `results/table1.md`
    and `results/table1.tex` with mean ± std over seeds. It rejects unknown rows, mixed `rPU` or `alpha`
    groups, and any run group without exactly three seeds rather than averaging them.
